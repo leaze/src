@@ -30,3 +30,4 @@ if __name__ == "__main__":
     lidar_sub = rospy.Subscriber("/scan", LaserScan, LidarCallback, queue_size=10)
     vel_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=10)
     rospy.spin()
+    rospy.loginfo("lidar_node 退出")
