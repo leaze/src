@@ -1,5 +1,8 @@
 # 启动Cat_kin
 
++ cd :~/code/catkin_ws/src/wpr_simulation/scripts
++ ./install_for_noetic.sh
++ catkin_make
 + source /home/gym/code/catkin_ws/devel/setup.bash
 + roslaunch wpr_simulation wpb_simple.launch
 
