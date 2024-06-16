@@ -3,6 +3,15 @@
 + source /home/gym/code/catkin_ws/devel/setup.bash
 + roslaunch wpr_simulation wpb_simple.launch
 
+## Cmake demo
+
+```Makefile
+add_executable(lidar_node src/lidar_node.cpp)
+target_link_libraries(lidar_node
+  ${catkin_LIBRARIES}
+)
+```
+
 ## 速度控制
 
 rosrun rqt_robot_steering rqt_robot_steering
@@ -66,6 +75,10 @@ git config --global https.proxy https://127.0.0.1:7890
         + 图像化显示当前系统活跃的节点以及节点间的话题通讯关系
 
 ## launch文件启动节点
+
+1. 使用lauch文件, 可以通过roslaunch指令一次启动多个节点
+2. 在launch文件中, 为节点添加output="screen"属性, 可以让节点信息输出在终端中(ROS_WARN不受改属性控制)
+3. 在launch文件中, 为节点添加launch-prefix="gnome-terminal -e"属性, 可以让节点运行在一个独立的终端中
 
 ```xml
 <launch>
