@@ -22,6 +22,8 @@ rosrun rqt_robot_steering rqt_robot_steering
 ## 在WSL中添加代理
 
 ```bash
+git config --global user.name Star-Cheng
+git config --global user.email 133592901@qq.com
 git config --global http.proxy http://127.0.0.1:7890
 git config --global https.proxy https://127.0.0.1:7890
 ```
