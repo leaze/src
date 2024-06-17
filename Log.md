@@ -5,11 +5,13 @@
 + catkin_make
 + source /home/gym/code/catkin_ws/devel/setup.bash
 + roslaunch wpr_simulation wpb_simple.launch
++ conda env: pip install rospkg
 
 ## Cmake demo
 
 ```Makefile
 add_executable(lidar_node src/lidar_node.cpp)
+add_dependencies(lidar_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(lidar_node
   ${catkin_LIBRARIES}
 )
