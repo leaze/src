@@ -1,10 +1,14 @@
 #include <ros/ros.h>
 #include <std_msgs/String.h>
 #include <iostream>
+#include <qq_msgs/Carry.h>
+
 using namespace std;
-void chao_callback(std_msgs::String msg)
+void chao_callback(qq_msgs::Carry msg)
 {
-    // cout << msg.data << endl;
+    cout << msg.data << endl;
+    ROS_WARN(msg.grade.c_str());
+    ROS_WARN("%ld star", msg.star);
     ROS_INFO(msg.data.c_str());
 }
 void yao_callback(std_msgs::String msg)
@@ -23,4 +27,5 @@ int main(int argc, char *argv[])
         ros::spinOnce();
         // ros::Rate loop_rate(10);
     }
+    return 0;
 }

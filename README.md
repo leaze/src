@@ -94,3 +94,40 @@ git config --global https.proxy https://127.0.0.1:7890
     <node pkg= "atr_pkg" type="ma_node" name="ma_node" output="screen"/>
 </launch>
 ```
+
+## ROS消息包
+
+![standard message](./images/std_msgs.png)
+![common message](./images/common_msgs.png)
+![geometry message](./images/geometry_msgs.png)
+![sensor message](./images/sensor_msgs.png)
+
+### 生成自定义消息包
+
+1. 创建新软件包, 依赖项: **message_generation**, **message_runtime**
+2. 软件包添加**msg**目录, 新建自定义消息文件, **以.msg结尾**
+3. 在CMakeLists.txt中, 将**新建的.msg文件**加入到**add_messages_files()**
+4. 在CMakeLists.txt中, 去掉**generate_messages()**注释符号, 将依赖的其他消息包名添加进去
+5. 在CMakeLists.txt中, 将**message_runtime**加入**catkin_package()**的**CATKIN_DEPENDS**
+6. 在package.xml中, 将message_runtime加入<build_depend>, <exec_depend>
+7. 编译软件包, 生成新的自定义消息类型
+8. 使用**rosmsg show package_name/message_name**, 查看自定义消息类型
+
+### 新消息类型在C++节点的应用
+
+1. 在节点代码中, 先include自定义消息类型的头文件
+2. 在发布或订阅话题的时候, 将话题中的消息类型设置为新的消息类型
+3. 按照新的消息结构, 对消息包进行赋值发送或读取解析
+4. 在CMakeLists.txt文件的find_package()中, 添加新消息名称作为依赖项
+5. 在节点的编译规则中, 添加一条add_dependencies(), 将新消息软件包名称_generate_messages_cpp作为依赖项
+6. 在package.xml文件中, 将新消息软件包名称加入<build_depend>, <exec_depend>
+7. 运行catkin_make, 编译新消息软件包
+
+### 新消息类型在Python节点的应用
+
+1. 在节点代码中, 先import自定义消息类型的模块
+2. 在发布或订阅话题的时候, 将话题中的消息类型设置为新的消息类型
+3. 按照新的消息结构, 对消息包进行赋值发送或读取解析
+4. 在CMakeLists.txt文件的find_package()中, 添加新消息包名称作为依赖项
+5. 在package.xml文件中, 将新消息包名称加入<build_depend>, <exec_depend>
+6. 重写编译, 确保软件包进入ROS的包列表中

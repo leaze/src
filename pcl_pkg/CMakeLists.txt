@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(ssr_pkg)
+project(pcl_pkg)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -8,10 +8,11 @@ project(ssr_pkg)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  pcl_conversions
+  pcl_ros
   roscpp
   rospy
-  std_msgs
-  qq_msgs
+  sensor_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -71,7 +72,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate added messages and services with any dependencies listed here
 # generate_messages(
 #   DEPENDENCIES
-#   std_msgs
+#   sensor_msgs
 # )
 
 ################################################
@@ -105,8 +106,8 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES ssr_pkg
-#  CATKIN_DEPENDS roscpp rospy std_msgs
+#  LIBRARIES pcl_pkg
+#  CATKIN_DEPENDS pcl_conversions pcl_ros roscpp rospy sensor_msgs
 #  DEPENDS system_lib
 )
 
@@ -123,7 +124,7 @@ include_directories(
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/ssr_pkg.cpp
+#   src/${PROJECT_NAME}/pcl_pkg.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -134,7 +135,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/ssr_pkg_node.cpp)
+# add_executable(${PROJECT_NAME}_node src/pcl_pkg_node.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -198,21 +199,32 @@ include_directories(
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_ssr_pkg.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_pcl_pkg.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
-# set(CMAKE_BUILD_TYPE Debug)
-add_executable(chao_node src/chao_node.cpp)
-target_link_libraries(chao_node
-  ${catkin_LIBRARIES}
-)
-add_dependencies(chao_node qq_msgs_generate_messages_cpp)
 
-add_executable(yao_node src/yao_node.cpp)
-target_link_libraries(yao_node
-  ${catkin_LIBRARIES}
+find_package(catkin REQUIRED COMPONENTS
+  roscpp
+  pcl_ros
 )
+find_package(PCL REQUIRED)
+
+catkin_package(
+  CATKIN_DEPENDS roscpp pcl_ros
+)
+
+include_directories(
+  ${catkin_INCLUDE_DIRS}
+  ${PCL_INCLUDE_DIRS}
+)
+
+add_executable(pcl_test src/pcl_test.cpp)
+target_link_libraries(pcl_test
+  ${catkin_LIBRARIES}
+  ${PCL_LIBRARIES}
+)
+
