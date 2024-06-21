@@ -205,3 +205,10 @@ include_directories(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+add_executable(nav_client 
+  src/nav_client.cpp
+)
+add_dependencies(nav_client ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(nav_client
+  ${catkin_LIBRARIES}
+)
