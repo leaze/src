@@ -23,6 +23,9 @@
 
     <!--- Run AMCL -->
     <node pkg="amcl" type="amcl" name="amcl"/>
-    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find nav_pkg)/rviz/nav.rviz" />
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find nav_pkg)/rviz/map_tool.rviz" />
+
+    <node pkg="waterplus_map_tools" type="wp_navi_server" name="wp_navi_server" output="screen"/>
+    <node pkg="waterplus_map_tools" type="wp_manager" name="wp_manager" output="screen"/>
 
 </launch>
