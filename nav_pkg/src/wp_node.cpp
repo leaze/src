@@ -11,7 +11,7 @@ int main(int argc, char **argv)
     ros::NodeHandle nh;
     ros::Publisher nav_pub = nh.advertise<std_msgs::String>("/waterplus/navi_waypoint", 10);
     ros::Subscriber res_sub = nh.subscribe("/waterplus/navi_result", 10, NavResultCallback);
-    sleep(1);
+    ros::Rate loop_rate(1);
     std_msgs::String nav_msg;
     nav_msg.data = '4';
     res_sub.getNumPublishers();

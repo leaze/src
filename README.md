@@ -5,7 +5,9 @@
 + catkin_make
 + source /home/gym/code/catkin_ws/devel/setup.bash
 + roslaunch wpr_simulation wpb_simple.launch
-+ conda env: pip install rospkg
+<!-- + conda env: pip install rospkg -->
++ cd /home/gym/code/catkin_ws/src/wpb_home/wpb_home_bringup/scripts
++ ./install_for_noetic.sh
 
 ## Cmake demo
 
