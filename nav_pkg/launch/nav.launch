@@ -19,7 +19,7 @@
 
     </node>
     <!-- Run map server -->
-    <node pkg="map_server" type="map_server" name="map_server" args="$(find wpr_simulation)/maps/gmapping.yaml"/>
+    <node pkg="map_server" type="map_server" name="map_server" args="$(find wpr_simulation)/maps/map.yaml"/>
 
     <!--- Run AMCL -->
     <node pkg="amcl" type="amcl" name="amcl"/>
