@@ -22,7 +22,9 @@
                     "text": "-gdb-set disassembly-flavor intel",
                     "ignoreFailures": true
                 }
-            ]
+            ],
+            "preLaunchTask": "make build",
+            // "miDebuggerPath": "/usr/bin/gdb"
         }
     ],
     "inputs": [
