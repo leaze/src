@@ -12,7 +12,8 @@
 
         <!-- <param name="base_local_planner" value="dwa_local_planner/DWAPlannerROS" /> -->
         <!-- <rosparam file="$(find wpb_home_tutorials)/nav_lidar/dwa_local_planner_params.yaml" command="load" /> -->
-
+        
+        <!-- sudo apt install ros-noetic-teb-local-planner -->
         <param name="base_local_planner" value="teb_local_planner/TebLocalPlannerROS" />
         <rosparam file="$(find wpb_home_tutorials)/nav_lidar/teb_local_planner_params.yaml" command="load" />
         <param name="controller_frequency" value="10" type="double"/>

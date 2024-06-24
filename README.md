@@ -6,6 +6,7 @@
 + source /home/gym/code/catkin_ws/devel/setup.bash
 + roslaunch wpr_simulation wpb_simple.launch
 <!-- + conda env: pip install rospkg -->
++ sudo apt install ros-noetic-teb-local-planner
 + cd /home/gym/code/catkin_ws/src/wpb_home/wpb_home_bringup/scripts
 + ./install_for_noetic.sh
 
