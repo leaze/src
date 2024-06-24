@@ -19,6 +19,13 @@ target_link_libraries(lidar_node
 )
 ```
 
+## waypoint tools
+
+```bash
+roslaunch waterplus_map_tools add_waypoint_simulation.launch
+rosrun waterplus_map_tools wp_saver
+```
+
 ## 速度控制
 
 rosrun rqt_robot_steering rqt_robot_steering
