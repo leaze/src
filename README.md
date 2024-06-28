@@ -141,3 +141,10 @@ git config --global https.proxy https://127.0.0.1:7890
 4. 在CMakeLists.txt文件的find_package()中, 添加新消息包名称作为依赖项
 5. 在package.xml文件中, 将新消息包名称加入<build_depend>, <exec_depend>
 6. 重写编译, 确保软件包进入ROS的包列表中
+
+## ROS中的相机话题
+
+1. /image_raw: 相机的原始数据
+2. /image_color: 相机的彩色图像数据
+3. /image_color_rect: 畸变校正后的彩色图像数据
+4. /camera_info: 相机参数信息
