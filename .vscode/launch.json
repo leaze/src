@@ -6,10 +6,10 @@
             "request": "launch",
             "program": "${workspaceFolder}/../devel/lib/${input:package}/${fileBasenameNoExtension}",
             "args": [],
-            "stopAtEntry": true,
+            "stopAtEntry": false, // 可选参数。如果为 true，则调试程序应在目标的入口点处停止。如果传递了 processId，则不起任何作用
             "cwd": "${workspaceFolder}",
             "environment": [],
-            "externalConsole": false,
+            "externalConsole": false, // 如果为 true，则为调试对象启动控制台。如果为 false，它在 Linux 和 Windows 上会显示在集成控制台中。
             "MIMode": "gdb",
             "setupCommands": [
                 {

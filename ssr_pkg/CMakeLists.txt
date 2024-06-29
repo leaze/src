@@ -205,7 +205,7 @@ include_directories(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
-# set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE Debug)
 add_executable(chao_node src/chao_node.cpp)
 target_link_libraries(chao_node
   ${catkin_LIBRARIES}
