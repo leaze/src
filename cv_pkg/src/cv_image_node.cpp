@@ -30,3 +30,6 @@ int main(int argc, char **argv)
     ros::spin();
     return 0;
 }
+// roslaunch wpr_simulation wpb_balls.launch
+// rosrun cv_pkg cv_image_node
+// rosrun wpr_simulation ball_random_move

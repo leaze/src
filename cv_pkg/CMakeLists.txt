@@ -214,3 +214,21 @@ target_link_libraries(cv_image_node
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
 )
+add_executable(cv_hsv_node src/cv_hsv_node.cpp)
+add_dependencies(cv_hsv_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(cv_hsv_node
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+)
+add_executable(cv_follow_node src/cv_follow_node.cpp)
+add_dependencies(cv_follow_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(cv_follow_node
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+)
+add_executable(cv_face_detect src/cv_face_detect.cpp)
+add_dependencies(cv_face_detect ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(cv_face_detect
+  ${catkin_LIBRARIES}
+  ${OpenCV_LIBRARIES}
+)
