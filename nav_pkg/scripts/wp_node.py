@@ -30,3 +30,7 @@ if __name__ == "__main__":
     navi_pub.publish(navi_msg)
     rospy.spin()
     rospy.logwarn("导航结束")
+
+# roslaunch wpr_simulation wpb_stage_robocup.launch
+# roslaunch nav_pkg nav.launch
+# rosrun nav_pkg wp_node.py
