@@ -1,0 +1,4 @@
+<launch>
+    <!--- Run Rviz -->
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find msckf_vio)/rviz/rviz_euroc_config.rviz" />
+</launch>
