@@ -24,6 +24,28 @@ code
 # Add src
 ```
 
+## msckf_vio
+
+```shell
+# https://ltslam-doc.readthedocs.io/en/latest/msckf/msckf.html
+cd ~/catkin_ws/src
+git clone https://github.com/KumarRobotics/msckf_vio.git
+cd ..
+sudo apt-get install libsuitesparse-dev
+sudo apt-get install ros-noetic-random-numbers
+echo $CMAKE_PREFIX_PATH
+source /opt/ros/noetic/setup.bash
+source ~/catkin_ws/devel/setup.bash
+catkin_make --pkg msckf_vio --cmake-args -DCMAKE_BUILD_TYPE=Release
+# http://robotics.ethz.ch/~asl-datasets/ijrr_euroc_mav_dataset/vicon_room1/V1_01_easy/V1_01_easy.bag
+# EuRoC
+roslaunch msckf_vio msckf_vio_euroc.launch
+# rosbag
+rosbag play ~/catkin_ws/data/V1_01_easy.bag
+# RVIZ load msckf_vio/rviz/rviz_euroc_config.rviz
+rivz # or roslaunch msckf_vio demo.launch
+```
+
 + cd :~/code/catkin_ws/src/wpr_simulation/scripts
 + ./install_for_noetic.sh
 + catkin_make
