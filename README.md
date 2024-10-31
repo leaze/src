@@ -16,6 +16,7 @@ cd ~/catkin_ws/src
 git clone https://github.com/6-robot/wpb_home.git
 cd wpb_home/wpb_home_bringup/scripts
 ./install_for_noetic.sh
+source ~/caktin_ws/devel/setup.bash
 cd ~/catkin_ws
 catkin_make
 code
