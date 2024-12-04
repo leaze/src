@@ -41,7 +41,7 @@ catkin_make --pkg msckf_vio --cmake-args -DCMAKE_BUILD_TYPE=Release
 # EuRoC
 roslaunch msckf_vio msckf_vio_euroc.launch
 # rosbag
-rosbag play ~/catkin_ws/data/V1_01_easy.bag
+rosbag play ~/code/catkin_ws/data/V1_01_easy.bag
 # RVIZ load msckf_vio/rviz/rviz_euroc_config.rviz
 rivz # or roslaunch msckf_vio demo.launch
 ```
@@ -55,6 +55,21 @@ rivz # or roslaunch msckf_vio demo.launch
 + sudo apt install ros-noetic-teb-local-planner
 + cd /home/gym/code/catkin_ws/src/wpb_home/wpb_home_bringup/scripts
 + ./install_for_noetic.sh
+
+## 创建自己的工作空间
+
+```bash
+mkdir -p ~/catkin_ws/src
+# 方法一
+# cd ~/catkin_ws/src
+# catkin_init_workspace
+# 方法二
+cd ~/catkin_ws
+catkin_make
+# 刷新工作空间的bash脚本
+source ~/catkin_ws/devel/setup.bash
+# 可以将这段命令添加到~/.bashrc中, 以便每次启动终端时都自动执行该命令
+```
 
 ## Cmake demo
 

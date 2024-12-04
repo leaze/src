@@ -28,6 +28,7 @@ int main(int argc, char **argv)
     // 暂停片刻以确保一切初始化完毕
     // sleep(1);
     ros::Rate sleep(1);
+    sleep.sleep();
     ROS_WARN("publish node 1");
     nav_msg.data = "1";
     nav_pub.publish(nav_msg);
