@@ -31,8 +31,8 @@ code
 cd ~/catkin_ws/src
 git clone https://github.com/KumarRobotics/msckf_vio.git
 cd ..
-sudo apt-get install libsuitesparse-dev
-sudo apt-get install ros-noetic-random-numbers
+sudo apt-get install libsuitesparse-dev -y
+sudo apt-get install ros-noetic-random-numbers -y
 echo $CMAKE_PREFIX_PATH
 source /opt/ros/noetic/setup.bash
 source ~/catkin_ws/devel/setup.bash
@@ -68,6 +68,19 @@ cd ~/catkin_ws
 catkin_make
 # 刷新工作空间的bash脚本
 source ~/catkin_ws/devel/setup.bash
+# 可以将这段命令添加到~/.bashrc中, 以便每次启动终端时都自动执行该命令
+```
+
+## docker 运行ros noetic
+
+```bash
+# https://www.zhihu.com/tardis/zm/art/552273212?source_id=1005
+https://blog.csdn.net/zkk9527/article/details/121159353
+sudo docker pull osrf/ros:noetic-desktop-full
+xhost +
+docker run --env="DISPLAY" --net=host --volume="$HOME/.Xauthority:/root/.Xauthority:rw" --env="QT_X11_NO_MITSHM=1" -v /tmp/.X11-unix:/tmp/.X11-unix:ro -it --name noetic --ipc=host -it --gpus all -v /mnt/d/Docker:/root/gym osrf/ros:noetic-desktop-full
+source /opt/ros/noetic/setup.bash
+source ~/gym/code/catkin_ws/devel/setup.bash
 # 可以将这段命令添加到~/.bashrc中, 以便每次启动终端时都自动执行该命令
 ```
 

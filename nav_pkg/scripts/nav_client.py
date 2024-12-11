@@ -4,7 +4,7 @@
 import rospy
 import actionlib
 from move_base_msgs.msg import MoveBaseAction, MoveBaseGoal
-
+import time
 
 def simple_action(x, y, w):
     goal.target_pose.pose.position.x = x
@@ -39,5 +39,7 @@ if __name__ == "__main__":
     else:
         rospy.loginfo("Goal failed with error code: " + str(ac.get_state()))
     simple_action(0.0, 0.0, 1.0)
+    time.sleep(5)
     simple_action(2.0, -2.0, 1.0)
+    time.sleep(5)
     simple_action(0.0, 0.0, 1.0)

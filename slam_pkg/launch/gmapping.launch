@@ -1,7 +1,7 @@
 <launch>
     <!-- 载入 机器人 和 SLAM 的仿真场景 -->
     <include file="$(find wpr_simulation)/launch/wpb_stage_robocup.launch"/>
-    <!-- Hector SLAM -->
+    <!-- GMapping SLAM -->
     <node pkg= "gmapping" type="slam_gmapping" name="slam_gmapping" output="screen">
         <param name="maxUrange" value="3.0"/>
         <param name="map_update_interval" value="0.5"/>
