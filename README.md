@@ -56,6 +56,15 @@ rivz # or roslaunch msckf_vio demo.launch
 + cd /home/gym/code/catkin_ws/src/wpb_home/wpb_home_bringup/scripts
 + ./install_for_noetic.sh
 
+## Fast_LIO
+
+```shell
+git clone https://github.com/hku-mars/FAST_LIO.git
+git clone https://github.com/Livox-SDK/livox_ros_driver.git
+cd FAST_LIO/include
+git clone https://github.com/hku-mars/ikd-Tree.git
+```
+
 ## 创建自己的工作空间
 
 ```bash
