@@ -59,6 +59,9 @@ rivz # or roslaunch msckf_vio demo.launch
 ## Fast_LIO
 
 ```shell
+# 参考连接
+# https://zhuanlan.zhihu.com/p/461246350
+# https://zhuanlan.zhihu.com/p/471876061
 git clone https://github.com/hku-mars/FAST_LIO.git
 git clone https://github.com/Livox-SDK/livox_ros_driver.git
 cd FAST_LIO/include

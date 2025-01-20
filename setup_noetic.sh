@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# livox_ros_driver
+git clone https://github.com/Livox-SDK/livox_ros_driver.git
 # wpr_simulation
 sudo apt install -y ros-noetic-desktop-full
 sudo apt install -y ros-noetic-navigation
