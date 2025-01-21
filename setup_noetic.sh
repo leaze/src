@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
+echo 'source /opt/ros/$ROS_DISTRO/setup.bash' >> ~/.bashrc
 # livox_ros_driver
+sudo apt update
+sudo apt install git -y
 git clone https://github.com/Livox-SDK/livox_ros_driver.git
 # wpr_simulation
 sudo apt install -y ros-noetic-desktop-full
@@ -28,4 +31,5 @@ sudo apt-get install libsuitesparse-dev -y
 sudo apt-get install ros-noetic-random-numbers -y
 cd .. && catkin_make -j16
 source /opt/ros/noetic/setup.bash
-source devel/setup.bash
+# source devel/setup.bash
+echo "source $(pwd)/devel/setup.bash" >> ~/.bashrc

@@ -24,7 +24,9 @@ code
 # Add src
 ```
 
-## msckf_vio
+## Project
+
+### msckf_vio
 
 ```shell
 # https://ltslam-doc.readthedocs.io/en/latest/msckf/msckf.html
@@ -56,7 +58,7 @@ rivz # or roslaunch msckf_vio demo.launch
 + cd /home/gym/code/catkin_ws/src/wpb_home/wpb_home_bringup/scripts
 + ./install_for_noetic.sh
 
-## Fast_LIO
+### Fast_LIO
 
 ```shell
 # 参考连接
@@ -66,9 +68,14 @@ git clone https://github.com/hku-mars/FAST_LIO.git
 git clone https://github.com/Livox-SDK/livox_ros_driver.git
 cd FAST_LIO/include
 git clone https://github.com/hku-mars/ikd-Tree.git
+# 启动运行fast_lio的demo
+roslaunch fast_lio mapping_velodyne.launch
+rosbag play /root/gym/data/slam/Velodyne_bagfiles/demo01_velodyne.bag
 ```
 
-## 创建自己的工作空间
+## Tools
+
+### 创建自己的工作空间
 
 ```bash
 mkdir -p ~/catkin_ws/src
@@ -83,7 +90,7 @@ source ~/catkin_ws/devel/setup.bash
 # 可以将这段命令添加到~/.bashrc中, 以便每次启动终端时都自动执行该命令
 ```
 
-## docker 运行ros noetic
+### docker 运行ros noetic
 
 ```bash
 # https://www.zhihu.com/tardis/zm/art/552273212?source_id=1005
@@ -96,7 +103,7 @@ source ~/gym/code/catkin_ws/devel/setup.bash
 # 可以将这段命令添加到~/.bashrc中, 以便每次启动终端时都自动执行该命令
 ```
 
-## Cmake demo
+### Cmake demo
 
 ```Makefile
 add_executable(lidar_node src/lidar_node.cpp)
@@ -106,32 +113,36 @@ target_link_libraries(lidar_node
 )
 ```
 
-## waypoint tools
+### waypoint tools
 
 ```bash
 roslaunch waterplus_map_tools add_waypoint_simulation.launch
 rosrun waterplus_map_tools wp_saver
 ```
 
-## 速度控制
+### 速度控制
 
 rosrun rqt_robot_steering rqt_robot_steering
 
-## 在WSL中添加代理
+### WSL中配置clash: <https://www.cnblogs.com/RioTian/p/1798676>
+
+### 在WSL中添加代理
 
 ```bash
-git config --global user.name Star-Cheng
-git config --global user.email 133592901@qq.com
-git config --global http.proxy http://127.0.0.1:7890
-git config --global https.proxy https://127.0.0.1:7890
+# git config --global user.name Star-Cheng
+# git config --global user.email 133592901@qq.com
+# git config --global http.proxy http://127.0.0.1:7890
+# git config --global https.proxy https://127.0.0.1:7890
 ```
 
-## Terminator
+### Terminator
 
 + sudo apt install terminator
 + ctrl+shift+E, ctrl+shift+O
 
-## Node(节点)
+## Study
+
+### Node(节点)
 
 1. 使用catkin_create_pkg创建一个软件包
 2. 在软件包的src文件夹下创建一个节点的cpp源码文件
@@ -141,7 +152,7 @@ git config --global https.proxy https://127.0.0.1:7890
 6. 在CMakeLists.txt中设置节点源码的编译规则
 7. 编译运行
 
-## Topic(话题)
+### Topic(话题)
 
 1. 一个ROS节点网络中, 可以同时存在**多个**话题
 2. 一个话题可以有**多个**发布者, 也可以有多个订阅者
@@ -149,7 +160,7 @@ git config --global https.proxy https://127.0.0.1:7890
 4. 不同的**传感器**小气通常会拥有**各自独立**话题名称, 每个话题只有**一个**发布者
 5. 机器人**速度指令话题通**常会有多个发布者, 但是同一时间只能有一个发言人
 
-## Message(消息)
+### Message(消息)
 
 1. 确定**话题名称**和**消息类型**
 2. 在代码文件中include**消息类型**对应的**头文件**
@@ -166,7 +177,7 @@ git config --global https.proxy https://127.0.0.1:7890
     4. rqt_graph
         + 图像化显示当前系统活跃的节点以及节点间的话题通讯关系
 
-## Subscriber(订阅者)
+### Subscriber(订阅者)
 
 1. 确定**话题名称**和**消息类型**
 2. 在代码文件中include**消息类型**对应的**头文件**
@@ -177,7 +188,7 @@ git config --global https.proxy https://127.0.0.1:7890
     1. rqt_graph
         + 图像化显示当前系统活跃的节点以及节点间的话题通讯关系
 
-## launch文件启动节点
+### launch文件启动节点
 
 1. 使用lauch文件, 可以通过roslaunch指令一次启动多个节点
 2. 在launch文件中, 为节点添加output="screen"属性, 可以让节点信息输出在终端中(ROS_WARN不受改属性控制)
@@ -191,14 +202,14 @@ git config --global https.proxy https://127.0.0.1:7890
 </launch>
 ```
 
-## ROS消息包
+### ROS消息包
 
 ![standard message](./images/std_msgs.png)
 ![common message](./images/common_msgs.png)
 ![geometry message](./images/geometry_msgs.png)
 ![sensor message](./images/sensor_msgs.png)
 
-### 生成自定义消息包
+#### 生成自定义消息包
 
 1. 创建新软件包, 依赖项: **message_generation**, **message_runtime**
 2. 软件包添加**msg**目录, 新建自定义消息文件, **以.msg结尾**
@@ -209,7 +220,7 @@ git config --global https.proxy https://127.0.0.1:7890
 7. 编译软件包, 生成新的自定义消息类型
 8. 使用**rosmsg show package_name/message_name**, 查看自定义消息类型
 
-### 新消息类型在C++节点的应用
+#### 新消息类型在C++节点的应用
 
 1. 在节点代码中, 先include自定义消息类型的头文件
 2. 在发布或订阅话题的时候, 将话题中的消息类型设置为新的消息类型
@@ -219,7 +230,7 @@ git config --global https.proxy https://127.0.0.1:7890
 6. 在package.xml文件中, 将新消息软件包名称加入<build_depend>, <exec_depend>
 7. 运行catkin_make, 编译新消息软件包
 
-### 新消息类型在Python节点的应用
+#### 新消息类型在Python节点的应用
 
 1. 在节点代码中, 先import自定义消息类型的模块
 2. 在发布或订阅话题的时候, 将话题中的消息类型设置为新的消息类型
@@ -228,7 +239,7 @@ git config --global https.proxy https://127.0.0.1:7890
 5. 在package.xml文件中, 将新消息包名称加入<build_depend>, <exec_depend>
 6. 重写编译, 确保软件包进入ROS的包列表中
 
-## ROS中的相机话题
+### ROS中的相机话题
 
 1. /image_raw: 相机的原始数据
 2. /image_color: 相机的彩色图像数据
