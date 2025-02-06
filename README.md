@@ -1,6 +1,13 @@
 # 启动Cat_kin
 
 ```shell
+# 新版本
+mkdir catkin_ws
+cd catkin_ws
+git clone https://github.com/star-cheng/src.git
+cd src
+bash setup_noetic.sh
+# 旧版本
 mkdir catkin_ws
 cd catkin_ws
 mkdir src
