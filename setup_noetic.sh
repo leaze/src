@@ -29,7 +29,7 @@ sudo apt-get install ros-noetic-controller-manager -y
 # msckf_vio
 sudo apt-get install libsuitesparse-dev -y
 sudo apt-get install ros-noetic-random-numbers -y
-cd .. && catkin_make -j16
+cd .. && catkin_make
 source /opt/ros/noetic/setup.bash
 # source devel/setup.bash
 echo "source $(pwd)/devel/setup.bash" >> ~/.bashrc

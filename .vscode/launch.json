@@ -4,7 +4,8 @@
             "name": "(gdb) 启动",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/../devel/lib/${input:package}/${fileBasenameNoExtension}",
+            // "program": "${workspaceFolder}/../devel/lib/${input:package}/${fileBasenameNoExtension}",
+            "program": "${workspaceFolder}/../devel/lib/${relativeFileDirname}/../${fileBasenameNoExtension}",
             "args": [],
             "stopAtEntry": false, // 可选参数。如果为 true，则调试程序应在目标的入口点处停止。如果传递了 processId，则不起任何作用
             "cwd": "${workspaceFolder}",

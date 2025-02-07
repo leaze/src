@@ -1,8 +1,8 @@
 common:  # 通用参数
-    # lid_topic:  "/points_raw"  # demo01_velodyne.bag
-    # imu_topic:  "/imu_raw"
-    lid_topic:  "/kinect2/sd/points"    # gazebo.bag
-    imu_topic:  "/imu/data"
+    lid_topic:  "/points_raw"  # demo01_velodyne.bag
+    imu_topic:  "/imu_raw"
+    # lid_topic:  "/kinect2/sd/points"    # gazebo.bag
+    # imu_topic:  "/imu/data"
     time_sync_en: false           # 是否启用 LiDAR 和 IMU 的时间同步 # ONLY turn on when external time synchronization is really not possible
     time_offset_lidar_to_imu: 0.0 # LiDAR 和 IMU 之间的固定时间偏移（单位：秒），用于手动校准时间差 # Time offset between lidar and IMU calibrated by other algorithms, e.g. LI-Init (can be found in README).
                                   # This param will take effect no matter what time_sync_en is. So if the time offset is not known exactly, please set as 0.0

@@ -20,7 +20,7 @@
 		{
 			"label": "make build", //编译的项目名，build
 			"type": "shell",
-			"command": "cd ..;catkin_make", //编译命令
+			"command": "mkdir -p ${workspaceFolder}/../devel/lib/${relativeFileDirname}/..;cd ..;catkin_make", //编译命令
 			"group": {
 				"kind": "build",
 				"isDefault": true

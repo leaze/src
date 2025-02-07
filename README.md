@@ -183,6 +183,12 @@ rosrun rqt_robot_steering rqt_robot_steering
         + 统计指定话题中消息包发送频率
     4. rqt_graph
         + 图像化显示当前系统活跃的节点以及节点间的话题通讯关系
+    5. rosmsgs list
+        + 列出所有ROS中内置的消息类型
+    6. rosmsg show 消息类型
+        + 显示指定消息类型的消息结构
+    7. rosmsg info 消息类型
+        + 显示指定消息类型的消息结构, 并显示消息类型的依赖关系
 
 ### Subscriber(订阅者)
 
@@ -226,6 +232,7 @@ rosrun rqt_robot_steering rqt_robot_steering
 6. 在package.xml中, 将message_runtime加入<build_depend>, <exec_depend>
 7. 编译软件包, 生成新的自定义消息类型
 8. 使用**rosmsg show package_name/message_name**, 查看自定义消息类型
+9. <buildtool_depend>: 表示编译工具, <build_depend>: 用于寻找构建改功能包需要的依赖, <build_export_depend>: 用于寻找构建该功能包库时所用依赖的库, <exec_depend>: 执行该程序包中代码所需要的程序包
 
 #### 新消息类型在C++节点的应用
 
@@ -252,3 +259,51 @@ rosrun rqt_robot_steering rqt_robot_steering
 2. /image_color: 相机的彩色图像数据
 3. /image_color_rect: 畸变校正后的彩色图像数据
 4. /camera_info: 相机参数信息
+
+### ROS中的基本数据
+
+1. /odom: 里程计数据
+2. /tf: 坐标系变换数据
+
+### ROS中导出里程计数据
+
+```shell
+rosbag play V1_01_easy.bag --topics /vicon/firefly_sbx/firefly_sbx   # 播放bag文件
+rostopic echo /vicon/firefly_sbx/firefly_sbx > transform_data.txt    # 导出为txt格式数据
+rostopic echo /vicon/firefly_sbx/firefly_sbx -p > transform_data.csv # 导出为csv格式数据, -p表示输出表格形式（CSV）进行打印
+```
+
+```python
+import rosbag
+from geometry_msgs.msg import TransformStamped
+# 处理数据
+bag = rosbag.Bag('/home/gym/code/catkin_ws/data/V1_01_easy.bag')
+for topic, msg, t in bag.read_messages(topics=['/vicon/firefly_sbx/firefly_sbx']):
+    print(f"Time: {t.to_sec()}, Position: {msg.transform.translation}, Orientation: {msg.transform.rotation}")
+bag.close()
+```
+
+```python
+# 可视化或保存数
+import rosbag
+from geometry_msgs.msg import TransformStamped
+import csv
+bag = rosbag.Bag("/home/gym/code/catkin_ws/data/V1_01_easy.bag")
+with open('odom_data.csv', 'w', newline='') as csvfile:
+    fieldnames = ['time', 'position_x', 'position_y', 'position_z', 'orientation_x', 'orientation_y', 'orientation_z', 'orientation_w']
+    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+    writer.writeheader()
+    for topic, msg, t in bag.read_messages(topics=['/vicon/firefly_sbx/firefly_sbx']):
+        # if isinstance(msg, TransformStamped):
+        writer.writerow({
+            'time': t.to_sec(),
+            'position_x': msg.transform.translation.x,
+            'position_y': msg.transform.translation.y,
+            'position_z': msg.transform.translation.z,
+            'orientation_x': msg.transform.rotation.x,
+            'orientation_y': msg.transform.rotation.y,
+            'orientation_z': msg.transform.rotation.z,
+            'orientation_w': msg.transform.rotation.w
+        })
+bag.close()
+```
