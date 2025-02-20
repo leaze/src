@@ -34,5 +34,6 @@ source /opt/ros/noetic/setup.bash
 # source devel/setup.bash
 echo "source $(pwd)/devel/setup.bash" >> ~/.bashrc
 
+git clone https://github.com/Star-Cheng/xv_sdk.git
 # cp -r /usr/share/ros-wrapper/xv_sdk ~/code/catkin_ws/src/
-# catkin_make -DXVSDK_INCLUDE_DIRS="/usr/include/xvsdk" -DXVSDK_LIBRARIES="/usr/lib/libxvsdk.so" 
+catkin_make -DXVSDK_INCLUDE_DIRS="/usr/include/xvsdk" -DXVSDK_LIBRARIES="/usr/lib/libxvsdk.so" 
