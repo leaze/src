@@ -80,6 +80,21 @@ roslaunch fast_lio mapping_velodyne.launch
 rosbag play /root/gym/data/slam/Velodyne_bagfiles/demo01_velodyne.bag
 ```
 
+### xv_skd
+
+```shell
+cd scripts && sh install_xvsdk.sh
+cp -r /usr/share/ros-wrapper/xv_sdk ~/code/catkin_ws/src/
+catkin_make -DXVSDK_INCLUDE_DIRS="/usr/include/xvsdk" -DXVSDK_LIBRARIES="/usr/lib/libxvsdk.so" 
+# 三. 启动（后面每次启动demo只需运行下面指令即可，需要开三个终端分别启动）
+# 1. node launch
+roscore
+# 2. roslaunch(in another terminal)
+cd ~/code/catkin_ws/
+roslaunch xv_sdk xv_sdk.launch
+rosrun rviz rviz -d `rospack find xv_sdk`/rviz/demo.rviz
+```
+
 ## Tools
 
 ### 创建自己的工作空间
