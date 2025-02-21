@@ -21,5 +21,6 @@ sudo apt install -y python3-rosdep python3-rosinstall python3-rosinstall-generat
 rosdep update
 source /opt/ros/noetic/setup.bash
 echo "source ${HOME}/code/catkin_ws/devel/setup.bash" >> ~/.bashrc
-cp -r /usr/share/ros-wrapper/xv_sdk /root/gym/code/catkin_ws/src/
-cd /root/gym/code/catkin_ws && catkin_make -DXVSDK_INCLUDE_DIRS="/usr/include/xvsdk" -DXVSDK_LIBRARIES="/usr/lib/libxvsdk.so" 
+# cp -r /usr/share/ros-wrapper/xv_sdk /root/gym/code/catkin_ws/src/
+git clone https://github.com/Star-Cheng/xv_sdk.git
+cd ../.. && catkin_make -DXVSDK_INCLUDE_DIRS="/usr/include/xvsdk" -DXVSDK_LIBRARIES="/usr/lib/libxvsdk.so" 
