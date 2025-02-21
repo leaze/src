@@ -1,13 +1,13 @@
 common:  # 通用参数
     ########################################################################
-    lid_topic:  "/points_raw"  # demo01_velodyne.bag
-    imu_topic:  "/imu_raw"
+    # lid_topic:  "/points_raw"  # demo01_velodyne.bag
+    # imu_topic:  "/imu_raw"
     ########################################################################
     # Recore Stereo Por data:
     # rosbag record -O my_data.bag /xv_sdk/xv_dev/tof_camera/point_cloud /xv_sdk/xv_dev/imu_sensor/data_raw /xv_sdk/xv_dev/sgbm_camera/point_cloud
     # lid_topic:  "/xv_sdk/xv_dev/tof_camera/point_cloud"  # tof data
-    # lid_topic:  "/xv_sdk/xv_dev/sgbm_camera/point_cloud"  # sgbm data
-    # imu_topic:  "/xv_sdk/xv_dev/imu_sensor/data_raw"
+    lid_topic:  "/xv_sdk/xv_dev/sgbm_camera/point_cloud"  # sgbm data
+    imu_topic:  "/xv_sdk/xv_dev/imu_sensor/data_raw"
     ########################################################################
     # lid_topic:  "/kinect2/sd/points"    # gazebo.bag
     # imu_topic:  "/imu/data"
