@@ -1,4 +1,8 @@
-# 启动Cat_kin
+# ROS
+
++ <https://robot.czxy.com/docs/ros/outline/category/>
+
+## 启动Cat_kin
 
 ```shell
 # 新版本
@@ -78,6 +82,21 @@ git clone https://github.com/hku-mars/ikd-Tree.git
 # 启动运行fast_lio的demo
 roslaunch fast_lio mapping_velodyne.launch
 rosbag play /root/gym/data/slam/Velodyne_bagfiles/demo01_velodyne.bag
+```
+
+### Octmap
+
+```shell
+# https://robot.czxy.com/car/orbslam/octomap/
+sudo apt update
+sudo apt upgrade
+sudo apt-get install ros-$ROS_DISTRO-octomap-ros -y
+sudo apt-get install ros-$ROS_DISTRO-octomap-msgs -y
+sudo apt-get install ros-$ROS_DISTRO-octomap-server -y
+sudo apt-get install ros-$ROS_DISTRO-octomap-rviz-plugins -y
+cd .. && git clone https://gitee.com/tangyang/pointcloud_publisher.git
+catkin_make
+# roslaunch pointcloud_publisher demo.launch
 ```
 
 ### xv_skd

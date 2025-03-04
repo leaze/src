@@ -66,10 +66,20 @@
 #define PUBFRAME_PERIOD     (20)
 
 /*** Time Log Variables ***/
+/*** 时间日志变量 ***/
+// kdtree相关时间统计变量
 double kdtree_incremental_time = 0.0, kdtree_search_time = 0.0, kdtree_delete_time = 0.0;
+
+// 用于存储各种时间戳和性能数据的数组
 double T1[MAXN], s_plot[MAXN], s_plot2[MAXN], s_plot3[MAXN], s_plot4[MAXN], s_plot5[MAXN], s_plot6[MAXN], s_plot7[MAXN], s_plot8[MAXN], s_plot9[MAXN], s_plot10[MAXN], s_plot11[MAXN];
+
+// 算法各阶段耗时统计
 double match_time = 0, solve_time = 0, solve_const_H_time = 0;
+
+// kdtree相关统计变量
 int    kdtree_size_st = 0, kdtree_size_end = 0, add_point_size = 0, kdtree_delete_counter = 0;
+
+// 系统运行标志位
 bool   runtime_pos_log = false, pcd_save_en = false, time_sync_en = false, extrinsic_est_en = true, path_en = true;
 /**************************/
 
@@ -105,13 +115,21 @@ deque<double>                     time_buffer;
 deque<PointCloudXYZI::Ptr>        lidar_buffer;
 deque<sensor_msgs::Imu::ConstPtr> imu_buffer;
 
+// 从地图中提取的特征点云
 PointCloudXYZI::Ptr featsFromMap(new PointCloudXYZI());
+// 去畸变后的特征点云
 PointCloudXYZI::Ptr feats_undistort(new PointCloudXYZI());
+// body坐标系下的下采样特征点云
 PointCloudXYZI::Ptr feats_down_body(new PointCloudXYZI());
+// world坐标系下的下采样特征点云
 PointCloudXYZI::Ptr feats_down_world(new PointCloudXYZI());
+// 法向量点云
 PointCloudXYZI::Ptr normvec(new PointCloudXYZI(100000, 1));
+// 原始激光点云
 PointCloudXYZI::Ptr laserCloudOri(new PointCloudXYZI(100000, 1));
+// 对应法向量点云
 PointCloudXYZI::Ptr corr_normvect(new PointCloudXYZI(100000, 1));
+// 特征点云数组指针
 PointCloudXYZI::Ptr _featsArray;
 
 pcl::VoxelGrid<PointType> downSizeFilterSurf;
@@ -140,10 +158,14 @@ geometry_msgs::PoseStamped msg_body_pose;
 shared_ptr<Preprocess> p_pre(new Preprocess());
 shared_ptr<ImuProcess> p_imu(new ImuProcess());
 
+// 信号处理函数，用于处理系统信号
 void SigHandle(int sig)
 {
+    // 设置程序退出标志为true
     flg_exit = true;
+    // 输出警告信息，显示捕获到的信号编号
     ROS_WARN("catch sig %d", sig);
+    // 通知所有等待在条件变量上的线程
     sig_buffer.notify_all();
 }
 
@@ -163,14 +185,21 @@ inline void dump_lio_state_to_log(FILE *fp)
     fflush(fp);
 }
 
+// 将点从body坐标系转换到world坐标系（使用ikfom状态）
 void pointBodyToWorld_ikfom(PointType const * const pi, PointType * const po, state_ikfom &s)
 {
+    // 将输入点转换为三维向量
     V3D p_body(pi->x, pi->y, pi->z);
+    
+    // 进行坐标变换：先应用IMU到LiDAR的旋转和平移，再应用world到IMU的旋转，最后加上world坐标系下的位置
     V3D p_global(s.rot * (s.offset_R_L_I*p_body + s.offset_T_L_I) + s.pos);
 
+    // 将转换后的坐标赋值给输出点
     po->x = p_global(0);
     po->y = p_global(1);
     po->z = p_global(2);
+    
+    // 保持点的强度值不变
     po->intensity = pi->intensity;
 }
 
@@ -511,6 +540,7 @@ void publish_frame_world(const ros::Publisher & pubLaserCloudFull)
         {
             RGBpointBodyToWorld(&feats_undistort->points[i], \
                                 &laserCloudWorld->points[i]);
+            // RGBpointBodyLidarToIMU(&feats_undistort->points[i], &laserCloudWorld->points[i]);
         }
         *pcl_wait_save += *laserCloudWorld;
 
@@ -635,24 +665,36 @@ void publish_path(const ros::Publisher pubPath)
     }
 }
 
+// 共享观测模型函数，用于计算测量残差和雅可比矩阵
 void h_share_model(state_ikfom &s, esekfom::dyn_share_datastruct<double> &ekfom_data)
 {
+    // 记录匹配开始时间
     double match_start = omp_get_wtime();
+    
+    // 清空用于存储有效点的点云
     laserCloudOri->clear(); 
     corr_normvect->clear(); 
+    
+    // 初始化总残差为0
     total_residual = 0.0; 
 
     /** closest surface search and residual computation **/
+    /** 最近邻表面搜索和残差计算 **/
     #ifdef MP_EN
+        // 设置OpenMP线程数
         omp_set_num_threads(MP_PROC_NUM);
+        // 使用OpenMP并行化for循环
         #pragma omp parallel for
     #endif
+    // 遍历所有下采样后的特征点
     for (int i = 0; i < feats_down_size; i++)
     {
+        // 获取当前点在body坐标系和world坐标系的表示
         PointType &point_body  = feats_down_body->points[i]; 
         PointType &point_world = feats_down_world->points[i]; 
 
         /* transform to world frame */
+        /* 将点从body坐标系转换到world坐标系 */
         V3D p_body(point_body.x, point_body.y, point_body.z);
         V3D p_global(s.rot * (s.offset_R_L_I*p_body + s.offset_T_L_I) + s.pos);
         point_world.x = p_global(0);
@@ -660,13 +702,17 @@ void h_share_model(state_ikfom &s, esekfom::dyn_share_datastruct<double> &ekfom_
         point_world.z = p_global(2);
         point_world.intensity = point_body.intensity;
 
+        // 用于存储最近邻点距离的数组
         vector<float> pointSearchSqDis(NUM_MATCH_POINTS);
 
+        // 获取当前点的最近邻点
         auto &points_near = Nearest_Points[i];
 
+        // 如果EKF已经收敛
         if (ekfom_data.converge)
         {
             /** Find the closest surfaces in the map **/
+            /** 在地图中寻找最近的表面 **/
             ikdtree.Nearest_Search(point_world, NUM_MATCH_POINTS, points_near, pointSearchSqDis);
             point_selected_surf[i] = points_near.size() < NUM_MATCH_POINTS ? false : pointSearchSqDis[NUM_MATCH_POINTS - 1] > 5 ? false : true;
         }
