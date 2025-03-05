@@ -17,6 +17,13 @@ void pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &msg)
 {
     pcl::PointCloud<pcl::PointXYZ>::Ptr temp_cloud(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::fromROSMsg(*msg, *temp_cloud);
+    // 反转每个点的坐标  
+    for (auto &point : temp_cloud->points)  
+    {  
+        point.x = point.x; // 反转 x 值  
+        point.y = -point.y; // 反转 y 值  
+        point.z = -point.z; // 反转 z 值  
+    }  
 
     boost::mutex::scoped_lock lock(data_mutex);
     current_cloud->swap(*temp_cloud);
@@ -27,8 +34,8 @@ void poseCallback(const xv_sdk::PoseStampedConfidence::ConstPtr &msg)
 {
     pcl::PointXYZ point;
     point.x = msg->poseMsg.pose.position.x;
-    point.y = msg->poseMsg.pose.position.y;
-    point.z = msg->poseMsg.pose.position.z;
+    point.y = -msg->poseMsg.pose.position.y;
+    point.z = -msg->poseMsg.pose.position.z;
 
     boost::mutex::scoped_lock lock(data_mutex);
     path_points->push_back(point);

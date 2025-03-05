@@ -35,13 +35,27 @@ void pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr &msg)
         {
             if (point.y < filter_cfg.y_threshold && point.y > -filter_cfg.y_threshold)
             {
-                filtered_cloud->push_back(point);
+                // 反转xyz值
+                pcl::PointXYZ reversed_point;
+                reversed_point.x = point.x;
+                reversed_point.y = -point.y;
+                reversed_point.z = -point.z;
+                filtered_cloud->push_back(reversed_point);
             }
         }
     }
     else
     {
-        *filtered_cloud = *temp_cloud; // 直接复制不过滤
+        // 不过滤时，直接反转xyz值
+        for (const auto &point : *temp_cloud)
+        {
+            pcl::PointXYZ reversed_point;
+            reversed_point.x = point.x;
+            reversed_point.y = -point.y;
+            reversed_point.z = -point.z;
+
+            filtered_cloud->push_back(reversed_point);
+        }
     }
 
     boost::mutex::scoped_lock lock(data_mutex);
@@ -53,8 +67,8 @@ void poseCallback(const xv_sdk::PoseStampedConfidence::ConstPtr &msg)
 {
     pcl::PointXYZ point;
     point.x = msg->poseMsg.pose.position.x;
-    point.y = msg->poseMsg.pose.position.y;
-    point.z = msg->poseMsg.pose.position.z;
+    point.y = -msg->poseMsg.pose.position.y;
+    point.z = -msg->poseMsg.pose.position.z;
 
     boost::mutex::scoped_lock lock(data_mutex);
     path_points->push_back(point);

@@ -65,12 +65,12 @@ void pointcloudCallback(const sensor_msgs::PointCloud2ConstPtr &msg)
         {
             if (std::abs(point.y) < g_config.filter.y_threshold)
             {
-                
+
                 // 反转xyz值
                 pcl::PointXYZ reversed_point;
                 reversed_point.x = point.x;
-                reversed_point.y = point.y;
-                reversed_point.z = point.z;
+                reversed_point.y = -point.y;
+                reversed_point.z = -point.z;
                 filtered->push_back(reversed_point);
             }
         }
@@ -83,8 +83,8 @@ void pointcloudCallback(const sensor_msgs::PointCloud2ConstPtr &msg)
         {
             pcl::PointXYZ reversed_point;
             reversed_point.x = point.x;
-            reversed_point.y = point.y;
-            reversed_point.z = point.z;
+            reversed_point.y = -point.y;
+            reversed_point.z = -point.z;
             filtered->push_back(reversed_point);
         }
     }
@@ -112,14 +112,14 @@ void poseCallback(const xv_sdk::PoseStampedConfidence::ConstPtr &msg)
 {
     Eigen::Vector3f position(
         msg->poseMsg.pose.position.x,
-        msg->poseMsg.pose.position.y,
-        msg->poseMsg.pose.position.z);
+        -msg->poseMsg.pose.position.y,
+        -msg->poseMsg.pose.position.z);
 
     Eigen::Quaternionf q_orig(
         msg->poseMsg.pose.orientation.w,
         msg->poseMsg.pose.orientation.x,
-        msg->poseMsg.pose.orientation.y,
-        msg->poseMsg.pose.orientation.z);
+        -msg->poseMsg.pose.orientation.y,
+        -msg->poseMsg.pose.orientation.z);
 
     // 坐标系修正：绕X轴旋转180度
     static const Eigen::Quaternionf q_correct(
@@ -149,13 +149,52 @@ void poseCallback(const xv_sdk::PoseStampedConfidence::ConstPtr &msg)
     }
     g_data.last_pose_time = now;
 }
+void drawCameraIndicator(pcl::visualization::PCLVisualizer &viewer,
+                         const Eigen::Affine3f &pose)
+{
+    const float size = 0.5;
 
+    // 定义局部坐标系三角形顶点（相机坐标系）
+    Eigen::Vector3f local_points[3] = {
+        Eigen::Vector3f(0, 0, 0),            // 原点
+        Eigen::Vector3f(-size, -size, size), // 左下
+        Eigen::Vector3f(size, -size, size)   // 右下
+    };
+
+    // 转换到世界坐标系
+    pcl::PointXYZ world_points[3];
+    for (int i = 0; i < 3; ++i)
+    {
+        Eigen::Vector3f p = pose * local_points[i];
+        world_points[i] = pcl::PointXYZ(p.x(), p.y(), p.z());
+    }
+
+    // 绘制三角形边
+    viewer.removeShape("cam_line1");
+    viewer.removeShape("cam_line2");
+    viewer.removeShape("cam_line3");
+    viewer.addLine(world_points[0], world_points[1], 0.0, 1.0, 0.0, "cam_line1");
+    viewer.addLine(world_points[1], world_points[2], 0.0, 1.0, 0.0, "cam_line2");
+    viewer.addLine(world_points[2], world_points[0], 0.0, 1.0, 0.0, "cam_line3");
+
+    // 添加方向箭头
+    Eigen::Vector3f tip = pose * Eigen::Vector3f(0, 0, size);
+    viewer.removeShape("cam_arrow");
+    viewer.addArrow(pcl::PointXYZ(tip.x(), tip.y(), tip.z()),
+                    world_points[0],
+                    0.0, 1.0, 0.0, false, "cam_arrow");
+}
 void setupVisualizer(pcl::visualization::PCLVisualizer &viewer)
 {
     viewer.setBackgroundColor(0, 0, 0);
-    Eigen::Affine3f pose_x = Eigen::Affine3f::Identity();  // 创建单位矩阵
-    pose_x.rotate(Eigen::AngleAxisf(M_PI, Eigen::Vector3f::UnitX()));  // 沿 X 轴旋转 180 度 (M_PI = 180度)
-    viewer.addCoordinateSystem(0.5, pose_x);
+    // Eigen::Affine3f pose_x = Eigen::Affine3f::Identity();             // 创建单位矩阵
+    // pose_x.rotate(Eigen::AngleAxisf(M_PI, Eigen::Vector3f::UnitX())); // 沿 X 轴旋转 180 度 (M_PI = 180度)
+    // viewer.addCoordinateSystem(0.5, pose_x);
+    viewer.addCoordinateSystem(0.1);
+    // 添加坐标轴标签  
+    viewer.addText3D("X", pcl::PointXYZ(0.1, 0, 0), 0.01, 1.0, 0.0, 0.0, "text_X"); // 红色  
+    viewer.addText3D("Y", pcl::PointXYZ(0, 0.1, 0), 0.01, 0.0, 1.0, 0.0, "text_Y"); // 绿色  
+    viewer.addText3D("Z", pcl::PointXYZ(0, 0, 0.1), 0.01, 0.0, 0.0, 1.0, "text_Z"); // 蓝色  
     viewer.initCameraParameters();
 }
 
@@ -200,10 +239,11 @@ void updateVisualization(pcl::visualization::PCLVisualizer &viewer)
     // 更新坐标系显示
     if (g_data.pose_updated)
     {
+        drawCameraIndicator(viewer, g_data.pose);
         viewer.removeCoordinateSystem("camera");
-        viewer.addCoordinateSystem(
-            g_config.visualization.coordinate_size,
-            g_data.pose, "camera");
+        // viewer.addCoordinateSystem(
+        //     g_config.visualization.coordinate_size,
+        //     g_data.pose, "camera");
         g_data.pose_updated = false;
     }
 

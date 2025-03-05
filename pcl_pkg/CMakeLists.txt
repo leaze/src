@@ -111,6 +111,7 @@ add_executable(slam_path src/slam_path.cpp)
 add_executable(slam_path2 src/slam_path2.cpp)
 add_executable(tof_point src/tof_point.cpp)
 add_executable(tof_point_rgbd src/tof_point_rgbd.cpp)
+add_executable(tof_slam src/tof_slam.cpp)
 add_executable(tof_slam_filter src/tof_slam_filter.cpp)
 add_executable(tof_slam_filter2 src/tof_slam_filter2.cpp)
 add_executable(tof_slam_filter3 src/tof_slam_filter3.cpp)
@@ -142,6 +143,10 @@ target_link_libraries(tof_point
   ${PCL_LIBRARIES}
 )
 target_link_libraries(tof_point_rgbd
+  ${catkin_LIBRARIES}
+  ${PCL_LIBRARIES}
+)
+target_link_libraries(tof_slam
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
 )

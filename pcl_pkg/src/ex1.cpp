@@ -9,13 +9,16 @@
 #include <Eigen/Geometry>
 #include <iomanip>
 
-struct SharedData {
+// 共享数据结构
+struct SharedData
+{
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud;
     pcl::PointCloud<pcl::PointXYZ>::Ptr path;
     Eigen::Affine3f pose;
     bool pose_updated;
     boost::mutex mutex;
 
+    // 新增数据成员
     int cloud_width = 0;
     int cloud_height = 0;
     double cloud_fps = 0.0;
@@ -29,108 +32,128 @@ struct SharedData {
                    pose_updated(false) {}
 };
 
-struct Config {
-    struct {
+// 系统配置参数
+struct Config
+{
+    struct
+    {
         float y_threshold = 1.0;
         bool enable = true;
     } filter;
 
-    struct {
+    struct
+    {
         float coordinate_size = 0.3;
         float line_width = 2.0;
-        float triangle_size = 0.5;  // 三角形尺寸参数
-        bool swap_xz = true;        // 坐标系交换参数
-        bool invert_y = true;       // Y轴反转参数
     } visualization;
 };
 
+// 全局实例
 SharedData g_data;
 Config g_config;
 
-void pointcloudCallback(const sensor_msgs::PointCloud2ConstPtr &msg) {
+void pointcloudCallback(const sensor_msgs::PointCloud2ConstPtr &msg)
+{
     pcl::PointCloud<pcl::PointXYZ>::Ptr temp(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::fromROSMsg(*msg, *temp);
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr filtered(new pcl::PointCloud<pcl::PointXYZ>);
 
-    for (const auto &p : *temp) {
-        // 坐标系转换
-        pcl::PointXYZ transformed;
-        if (g_config.visualization.swap_xz) {
-            transformed.x = p.z;
-            transformed.z = p.x;
-        } else {
-            transformed.x = p.x;
-            transformed.z = p.z;
-        }
-        transformed.y = g_config.visualization.invert_y ? -p.y : p.y;
+    if (g_config.filter.enable && g_config.filter.y_threshold > 0)
+    {
+        for (const auto &point : *temp)
+        {
+            if (std::abs(point.y) < g_config.filter.y_threshold)
+            {
 
-        if (g_config.filter.enable && std::abs(transformed.y) < g_config.filter.y_threshold) {
-            filtered->push_back(transformed);
+                // 反转xyz值
+                pcl::PointXYZ reversed_point;
+                reversed_point.x = point.x;
+                reversed_point.y = -point.y;
+                reversed_point.z = -point.z;
+                filtered->push_back(reversed_point);
+            }
+        }
+    }
+    else
+    {
+        // *filtered = *temp;
+        // 不过滤时，直接反转xyz值
+        for (const auto &point : *temp)
+        {
+            pcl::PointXYZ reversed_point;
+            reversed_point.x = point.x;
+            reversed_point.y = -point.y;
+            reversed_point.z = -point.z;
+            filtered->push_back(reversed_point);
         }
     }
 
     boost::mutex::scoped_lock lock(g_data.mutex);
+    // 更新点云数据及元信息
     g_data.cloud->swap(*filtered);
     g_data.cloud_width = msg->width;
     g_data.cloud_height = msg->height;
 
-    // 计算帧率
+    // 计算点云帧率
     ros::Time now = ros::Time::now();
-    if (g_data.last_cloud_time.isValid()) {
+    if (g_data.last_cloud_time.isValid())
+    {
         double delta = (now - g_data.last_cloud_time).toSec();
-        if (delta > 0) g_data.cloud_fps = 1.0 / delta;
+        if (delta > 0)
+        {
+            g_data.cloud_fps = 1.0 / delta;
+        }
     }
     g_data.last_cloud_time = now;
 }
 
-void poseCallback(const xv_sdk::PoseStampedConfidence::ConstPtr &msg) {
+void poseCallback(const xv_sdk::PoseStampedConfidence::ConstPtr &msg)
+{
     Eigen::Vector3f position(
         msg->poseMsg.pose.position.x,
-        msg->poseMsg.pose.position.y,
-        msg->poseMsg.pose.position.z);
+        -msg->poseMsg.pose.position.y,
+        -msg->poseMsg.pose.position.z);
 
     Eigen::Quaternionf q_orig(
         msg->poseMsg.pose.orientation.w,
         msg->poseMsg.pose.orientation.x,
-        msg->poseMsg.pose.orientation.y,
-        msg->poseMsg.pose.orientation.z);
+        -msg->poseMsg.pose.orientation.y,
+        -msg->poseMsg.pose.orientation.z);
 
-    // 坐标系修正
-    static const Eigen::Quaternionf q_correct(Eigen::AngleAxisf(M_PI, Eigen::Vector3f::UnitX()));
+    // 坐标系修正：绕X轴旋转180度
+    static const Eigen::Quaternionf q_correct(
+        Eigen::AngleAxisf(M_PI, Eigen::Vector3f::UnitX()));
+
     Eigen::Affine3f pose = Eigen::Affine3f::Identity();
     pose.translate(position);
-    pose.rotate(q_orig * q_correct);
+    pose.rotate(q_orig * q_correct); // 应用修正后的旋转
 
-    // 应用可视化参数转换
-    if (g_config.visualization.swap_xz) {
-        Eigen::Vector3f t = pose.translation();
-        pose.translation() << t.z(), t.y(), t.x();
-    }
-    if (g_config.visualization.invert_y) {
-        pose.translation().y() *= -1;
-    }
+    pcl::PointXYZ path_point(position.x(), position.y(), position.z());
 
     boost::mutex::scoped_lock lock(g_data.mutex);
-    g_data.path->push_back(pcl::PointXYZ(pose.translation().x(), 
-                                       pose.translation().y(), 
-                                       pose.translation().z()));
+    // 更新位姿数据
+    g_data.path->push_back(path_point);
     g_data.pose = pose;
     g_data.pose_updated = true;
 
-    // 计算帧率
+    // 计算位姿帧率
     ros::Time now = ros::Time::now();
-    if (g_data.last_pose_time.isValid()) {
+    if (g_data.last_pose_time.isValid())
+    {
         double delta = (now - g_data.last_pose_time).toSec();
-        if (delta > 0) g_data.pose_fps = 1.0 / delta;
+        if (delta > 0)
+        {
+            g_data.pose_fps = 1.0 / delta;
+        }
     }
     g_data.last_pose_time = now;
 }
+void drawCameraIndicator(pcl::visualization::PCLVisualizer &viewer,
+                         const Eigen::Affine3f &pose)
+{
+    const float size = 0.5;
 
-void drawCameraIndicator(pcl::visualization::PCLVisualizer& viewer, 
-                        const Eigen::Affine3f& pose) {
-    const float size = g_config.visualization.triangle_size;
-    
     // 定义局部坐标系三角形顶点（相机坐标系）
     Eigen::Vector3f local_points[3] = {
         Eigen::Vector3f(0, 0, 0),            // 原点
@@ -140,7 +163,8 @@ void drawCameraIndicator(pcl::visualization::PCLVisualizer& viewer,
 
     // 转换到世界坐标系
     pcl::PointXYZ world_points[3];
-    for(int i=0; i<3; ++i){
+    for (int i = 0; i < 3; ++i)
+    {
         Eigen::Vector3f p = pose * local_points[i];
         world_points[i] = pcl::PointXYZ(p.x(), p.y(), p.z());
     }
@@ -154,76 +178,124 @@ void drawCameraIndicator(pcl::visualization::PCLVisualizer& viewer,
     viewer.addLine(world_points[2], world_points[0], 0.0, 1.0, 0.0, "cam_line3");
 
     // 添加方向箭头
-    Eigen::Vector3f tip = pose * Eigen::Vector3f(0, 0, size*1.5);
+    Eigen::Vector3f tip = pose * Eigen::Vector3f(0, 0, size);
     viewer.removeShape("cam_arrow");
     viewer.addArrow(pcl::PointXYZ(tip.x(), tip.y(), tip.z()),
-                   world_points[0],
-                   0.0, 1.0, 0.0, false, "cam_arrow");
+                    world_points[0],
+                    0.0, 1.0, 0.0, false, "cam_arrow");
+}
+void setupVisualizer(pcl::visualization::PCLVisualizer &viewer)
+{
+    viewer.setBackgroundColor(0, 0, 0);
+    // Eigen::Affine3f pose_x = Eigen::Affine3f::Identity();             // 创建单位矩阵
+    // pose_x.rotate(Eigen::AngleAxisf(M_PI, Eigen::Vector3f::UnitX())); // 沿 X 轴旋转 180 度 (M_PI = 180度)
+    // viewer.addCoordinateSystem(0.5, pose_x);
+    viewer.addCoordinateSystem(0.5);
+    // 添加坐标轴标签  
+    viewer.addText3D("X", pcl::PointXYZ(0.15, 0, 0), 0.05, 1.0, 0.0, 0.0, "text_X"); // 红色  
+    viewer.addText3D("Y", pcl::PointXYZ(0, 0.15, 0), 0.05, 0.0, 1.0, 0.0, "text_Y"); // 绿色  
+    viewer.addText3D("Z", pcl::PointXYZ(0, 0, 0.15), 0.05, 0.0, 0.0, 1.0, "text_Z"); // 蓝色  
+    viewer.initCameraParameters();
 }
 
-void updateVisualization(pcl::visualization::PCLVisualizer &viewer) {
+void updateVisualization(pcl::visualization::PCLVisualizer &viewer)
+{
     static size_t last_path_size = 0;
 
-    // 更新点云
-    if (!g_data.cloud->empty()) {
+    // 更新点云显示
+    if (!g_data.cloud->empty())
+    {
         viewer.removePointCloud("cloud");
         viewer.addPointCloud<pcl::PointXYZ>(g_data.cloud, "cloud");
         viewer.setPointCloudRenderingProperties(
             pcl::visualization::PCL_VISUALIZER_COLOR,
-            0.7, 0.7, 0.7, "cloud");
+            0.9, 0.9, 0.9, "cloud");
     }
 
-    // 更新路径
-    if (g_data.path->size() >= 2) {
-        for (size_t i=0; i<last_path_size; ++i)
-            viewer.removeShape("line_"+std::to_string(i));
+    // 更新路径显示
+    if (g_data.path->size() >= 2)
+    {
+        for (size_t i = 0; i < last_path_size; ++i)
+        {
+            viewer.removeShape("line_" + std::to_string(i));
+        }
 
-        for (size_t i=0; i<g_data.path->size()-1; ++i) {
-            const auto& p1 = (*g_data.path)[i];
-            const auto& p2 = (*g_data.path)[i+1];
-            viewer.addLine<pcl::PointXYZ>(p1, p2, 1.0, 0.0, 0.0, "line_"+std::to_string(i));
+        for (size_t i = 0; i < g_data.path->size() - 1; ++i)
+        {
+            const auto &p1 = g_data.path->at(i);
+            const auto &p2 = g_data.path->at(i + 1);
+
+            viewer.addLine<pcl::PointXYZ>(
+                p1, p2, 1.0, 0.0, 0.0,
+                "line_" + std::to_string(i));
             viewer.setShapeRenderingProperties(
                 pcl::visualization::PCL_VISUALIZER_LINE_WIDTH,
-                g_config.visualization.line_width, "line_"+std::to_string(i));
+                g_config.visualization.line_width,
+                "line_" + std::to_string(i));
         }
-        last_path_size = g_data.path->size()-1;
+        last_path_size = g_data.path->size() - 1;
     }
 
-    // 更新相机指示器
-    if (g_data.pose_updated) {
+    // 更新坐标系显示
+    if (g_data.pose_updated)
+    {
         drawCameraIndicator(viewer, g_data.pose);
-        viewer.removeCoordinateSystem("cam_coord");
-        viewer.addCoordinateSystem(g_config.visualization.coordinate_size, 
-                                 g_data.pose, "cam_coord");
+        viewer.removeCoordinateSystem("camera");
+        // viewer.addCoordinateSystem(
+        //     g_config.visualization.coordinate_size,
+        //     g_data.pose, "camera");
         g_data.pose_updated = false;
     }
 
-    // 更新文本信息
-    Eigen::Vector3f pos = g_data.pose.translation();
-    Eigen::Vector3f euler = g_data.pose.rotation().eulerAngles(2,1,0);
+    // 更新文本信息显示
+    Eigen::Vector3f translation = g_data.pose.translation();
+    Eigen::Vector3f euler_angles = g_data.pose.rotation().eulerAngles(2, 1, 0);
 
-    std::ostringstream oss;
-    oss << "Camera Pose:\n"
-        << std::fixed << std::setprecision(2)
-        << "Position(m)\nX:" << pos.x() << " Y:" << pos.y() << " Z:" << pos.z()
-        << "\nRotation(deg)\nYaw:" << euler[0]*180/M_PI 
-        << " Pitch:" << euler[1]*180/M_PI 
-        << " Roll:" << euler[2]*180/M_PI
-        << "\n\nFrame Rates\nCloud:" << std::setprecision(1) << g_data.cloud_fps
-        << "Hz\nPose:" << g_data.pose_fps << "Hz"
-        << "\n\nResolution: " << g_data.cloud_width << "x" << g_data.cloud_height;
+    float roll = euler_angles[2] * 180.0 / M_PI;
+    float pitch = euler_angles[1] * 180.0 / M_PI;
+    float yaw = euler_angles[0] * 180.0 / M_PI;
 
-    viewer.removeShape("info_text");
-    viewer.addText(oss.str(), 10, 30, 12, 1,1,1, "info_text");
+    std::ostringstream pose_ss;
+    pose_ss << "Position (m):\n"
+            << std::fixed << std::setprecision(2)
+            << "X: " << translation.x() << "\n"
+            << "Y: " << translation.y() << "\n"
+            << "Z: " << translation.z() << "\n"
+            << "Rotation (deg):\n"
+            << "Roll: " << roll << "\n"
+            << "Pitch: " << pitch << "\n"
+            << "Yaw: " << yaw;
+
+    std::ostringstream fps_ss;
+    fps_ss << "Frame Rates (Hz):\n"
+           << std::fixed << std::setprecision(1)
+           << "PointCloud: " << g_data.cloud_fps << "\n"
+           << "Pose: " << g_data.pose_fps;
+
+    std::ostringstream res_ss;
+    res_ss << "Resolution: "
+           << (g_data.cloud_width > 0 ? std::to_string(g_data.cloud_width) : "N/A")
+           << "x"
+           << (g_data.cloud_height > 0 ? std::to_string(g_data.cloud_height) : "N/A");
+
+    // 清除旧文本
+    viewer.removeText3D("pose_text");
+    viewer.removeText3D("fps_text");
+    viewer.removeText3D("res_text");
+
+    // 添加新文本（左上角显示）
+    viewer.addText(pose_ss.str(), 10, 30, 12, 1.0, 1.0, 1.0, "pose_text");
+    viewer.addText(fps_ss.str(), 10, 150, 12, 1.0, 1.0, 1.0, "fps_text");
+    viewer.addText(res_ss.str(), 10, 200, 12, 1.0, 1.0, 1.0, "res_text");
 }
 
-void visualizationThread() {
-    pcl::visualization::PCLVisualizer viewer("SLAM Visualizer");
-    viewer.setBackgroundColor(0.1, 0.1, 0.1);
-    viewer.initCameraParameters();
-    viewer.setCameraPosition(0, -5, 3, 0, 0, 0);
+void visualizationThread()
+{
+    pcl::visualization::PCLVisualizer viewer("SLAM Viewer");
+    setupVisualizer(viewer);
 
-    while (!viewer.wasStopped() && ros::ok()) {
+    while (!viewer.wasStopped() && ros::ok())
+    {
         {
             boost::mutex::scoped_lock lock(g_data.mutex);
             updateVisualization(viewer);
@@ -233,23 +305,27 @@ void visualizationThread() {
     }
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv)
+{
     ros::init(argc, argv, "slam_visualizer");
     ros::NodeHandle nh, pnh("~");
 
+    // 加载配置参数
     pnh.param("filter/enable", g_config.filter.enable, true);
     pnh.param("filter/y_threshold", g_config.filter.y_threshold, 1.0f);
-    pnh.param("visualization/coordinate_size", g_config.visualization.coordinate_size, 0.5f);
-    pnh.param("visualization/line_width", g_config.visualization.line_width, 2.0f);
-    pnh.param("visualization/triangle_size", g_config.visualization.triangle_size, 0.5f);
-    pnh.param("visualization/swap_xz", g_config.visualization.swap_xz, true);
-    pnh.param("visualization/invert_y", g_config.visualization.invert_y, true);
+    pnh.param("visualization/coordinate_size",
+              g_config.visualization.coordinate_size, 0.3f);
+    pnh.param("visualization/line_width",
+              g_config.visualization.line_width, 2.0f);
 
+    // 订阅话题
     ros::Subscriber sub_cloud = nh.subscribe<sensor_msgs::PointCloud2>(
         "/xv_sdk/xv_dev/tof_camera/point_cloud", 1, pointcloudCallback);
     ros::Subscriber sub_pose = nh.subscribe<xv_sdk::PoseStampedConfidence>(
         "/xv_sdk/xv_dev/slam/pose", 1, poseCallback);
 
+    // 启动可视化线程
     visualizationThread();
+
     return 0;
 }
