@@ -111,6 +111,12 @@ add_executable(slam_path src/slam_path.cpp)
 add_executable(slam_path2 src/slam_path2.cpp)
 add_executable(tof_point src/tof_point.cpp)
 add_executable(tof_point_rgbd src/tof_point_rgbd.cpp)
+add_executable(tof_slam_filter src/tof_slam_filter.cpp)
+add_executable(tof_slam_filter2 src/tof_slam_filter2.cpp)
+add_executable(tof_slam_filter3 src/tof_slam_filter3.cpp)
+add_executable(ex1 src/ex1.cpp)
+add_executable(ex2 src/ex2.cpp)
+add_executable(ex3 src/ex3.cpp)
 
 # Link the libraries for each executable
 target_link_libraries(pcl_test
@@ -136,6 +142,30 @@ target_link_libraries(tof_point
   ${PCL_LIBRARIES}
 )
 target_link_libraries(tof_point_rgbd
+  ${catkin_LIBRARIES}
+  ${PCL_LIBRARIES}
+)
+target_link_libraries(tof_slam_filter
+  ${catkin_LIBRARIES}
+  ${PCL_LIBRARIES}
+)
+target_link_libraries(tof_slam_filter2
+  ${catkin_LIBRARIES}
+  ${PCL_LIBRARIES}
+)
+target_link_libraries(tof_slam_filter3
+  ${catkin_LIBRARIES}
+  ${PCL_LIBRARIES}
+)
+target_link_libraries(ex1
+  ${catkin_LIBRARIES}
+  ${PCL_LIBRARIES}
+)
+target_link_libraries(ex2
+  ${catkin_LIBRARIES}
+  ${PCL_LIBRARIES}
+)
+target_link_libraries(ex3
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
 )

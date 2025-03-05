@@ -61,32 +61,17 @@ void pointcloudCallback(const sensor_msgs::PointCloud2ConstPtr &msg)
 
     if (g_config.filter.enable && g_config.filter.y_threshold > 0)
     {
-        for (const auto &point : *temp)
+        for (const auto &p : *temp)
         {
-            if (std::abs(point.y) < g_config.filter.y_threshold)
+            if (std::abs(p.y) < g_config.filter.y_threshold)
             {
-                
-                // 反转xyz值
-                pcl::PointXYZ reversed_point;
-                reversed_point.x = point.x;
-                reversed_point.y = point.y;
-                reversed_point.z = point.z;
-                filtered->push_back(reversed_point);
+                filtered->push_back(p);
             }
         }
     }
     else
     {
-        // *filtered = *temp;
-        // 不过滤时，直接反转xyz值
-        for (const auto &point : *temp)
-        {
-            pcl::PointXYZ reversed_point;
-            reversed_point.x = point.x;
-            reversed_point.y = point.y;
-            reversed_point.z = point.z;
-            filtered->push_back(reversed_point);
-        }
+        *filtered = *temp;
     }
 
     boost::mutex::scoped_lock lock(g_data.mutex);
@@ -153,9 +138,6 @@ void poseCallback(const xv_sdk::PoseStampedConfidence::ConstPtr &msg)
 void setupVisualizer(pcl::visualization::PCLVisualizer &viewer)
 {
     viewer.setBackgroundColor(0, 0, 0);
-    Eigen::Affine3f pose_x = Eigen::Affine3f::Identity();  // 创建单位矩阵
-    pose_x.rotate(Eigen::AngleAxisf(M_PI, Eigen::Vector3f::UnitX()));  // 沿 X 轴旋转 180 度 (M_PI = 180度)
-    viewer.addCoordinateSystem(0.5, pose_x);
     viewer.initCameraParameters();
 }
 
