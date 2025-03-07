@@ -1,5 +1,6 @@
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <nav_msgs/Path.h>  // 新增路径消息头文件
 #include <xv_sdk/PoseStampedConfidence.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -15,7 +16,8 @@
 enum RenderMode
 {
     DEPTH_COLOR,
-    NORMAL_COLOR
+    NORMAL_COLOR,
+    HIGH_COLOR
 };
 
 // 带颜色的点类型
@@ -65,13 +67,15 @@ struct Config
     } visualization;
 
     // 渲染参数
-    RenderMode render_mode = DEPTH_COLOR;
+    RenderMode render_mode = HIGH_COLOR;
     float normal_search_radius = 0.03;
 };
 
 // 全局实例
 SharedData g_data;
 Config g_config;
+ros::Publisher g_pub_processed_cloud;  // 全局发布者
+ros::Publisher g_pub_slam_path;
 
 // HSV转RGB颜色映射
 void HSVtoRGB(float h, float s, float v, uint8_t &r, uint8_t &g, uint8_t &b)
@@ -151,6 +155,34 @@ void applyDepthColor(pcl::PointCloud<PointT>::Ptr &cloud)
     }
 }
 
+// 高度着色处理
+void applyHighColor(pcl::PointCloud<PointT>::Ptr &cloud)
+{
+    if (cloud->empty())
+        return;
+
+    float min_y = std::numeric_limits<float>::max();
+    float max_y = -std::numeric_limits<float>::max();
+    for (const auto &p : *cloud)
+    {
+        if (p.y < min_y)
+            min_y = p.y;
+        if (p.y > max_y)
+            max_y = p.y;
+    }
+
+    float range = max_y - min_y;
+    for (auto &p : *cloud)
+    {
+        float ratio = (range != 0) ? (p.y - min_y) / range : 0.5;
+        uint8_t r = 0, g = 0, b = 0; // 显式初始化
+        HSVtoRGB(0.66f * (1 - ratio), 1.0f, 1.0f, r, g, b);
+        p.r = r;
+        p.g = g;
+        p.b = b;
+    }
+}
+
 // 法线着色处理
 void applyNormalColor(pcl::PointCloud<PointT>::Ptr &cloud)
 {
@@ -221,7 +253,18 @@ void pointcloudCallback(const sensor_msgs::PointCloud2ConstPtr &msg)
     case NORMAL_COLOR:
         applyNormalColor(filtered);
         break;
+    case HIGH_COLOR:
+        applyHighColor(filtered);
+        break;
     }
+    // -----------------------------------------------------
+    // 发布处理后的点云
+    sensor_msgs::PointCloud2 processed_msg;
+    pcl::toROSMsg(*filtered, processed_msg);
+    processed_msg.header = msg->header;
+    processed_msg.header.frame_id = "map";
+    g_pub_processed_cloud.publish(processed_msg);
+    // -----------------------------------------------------
 
     // 更新共享数据
     boost::mutex::scoped_lock lock(g_data.mutex);
@@ -267,6 +310,26 @@ void poseCallback(const xv_sdk::PoseStampedConfidence::ConstPtr &msg)
     g_data.path->push_back(path_point);
     g_data.pose = pose;
     g_data.pose_updated = true;
+
+    // -----------------------------------------------------
+    // 发布路径信息
+    nav_msgs::Path path_msg;
+    path_msg.header.stamp = ros::Time::now();
+    path_msg.header.frame_id = "map";
+
+    // 填充路径消息
+    for (const auto& point : *g_data.path) {
+        geometry_msgs::PoseStamped pose_stamped;
+        pose_stamped.header = path_msg.header;
+        pose_stamped.pose.position.x = point.x;
+        pose_stamped.pose.position.y = point.y;
+        pose_stamped.pose.position.z = point.z;
+        pose_stamped.pose.orientation.w = 1.0;
+        path_msg.poses.push_back(pose_stamped);
+    }
+
+    g_pub_slam_path.publish(path_msg);
+    // -----------------------------------------------------
 
     // 计算位姿帧率
     ros::Time now = ros::Time::now();
@@ -410,6 +473,11 @@ int main(int argc, char **argv)
 {
     ros::init(argc, argv, "enhanced_slam_visualizer");
     ros::NodeHandle nh, pnh("~");
+    // -----------------------------------------------------
+    // 初始化发布者
+    g_pub_processed_cloud = nh.advertise<sensor_msgs::PointCloud2>("processed_point_cloud", 1);
+    g_pub_slam_path = nh.advertise<nav_msgs::Path>("slam_path", 1);
+    // -----------------------------------------------------
 
     // 加载参数
     pnh.param("filter/enable", g_config.filter.enable, true);
