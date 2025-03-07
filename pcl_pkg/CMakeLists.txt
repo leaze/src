@@ -118,6 +118,8 @@ add_executable(tof_slam_filter3 src/tof_slam_filter3.cpp)
 add_executable(ex1 src/ex1.cpp)
 add_executable(ex2 src/ex2.cpp)
 add_executable(ex3 src/ex3.cpp)
+add_executable(tof_point_color src/tof_point_color.cpp)
+add_executable(tof_slam_color src/tof_slam_color.cpp)
 
 # Link the libraries for each executable
 target_link_libraries(pcl_test
@@ -171,6 +173,14 @@ target_link_libraries(ex2
   ${PCL_LIBRARIES}
 )
 target_link_libraries(ex3
+  ${catkin_LIBRARIES}
+  ${PCL_LIBRARIES}
+)
+target_link_libraries(tof_point_color
+  ${catkin_LIBRARIES}
+  ${PCL_LIBRARIES}
+)
+target_link_libraries(tof_slam_color
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
 )

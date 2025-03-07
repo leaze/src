@@ -37,7 +37,9 @@ struct Config
 {
     struct
     {
+        float x_threshold = 10.0;
         float y_threshold = 1.0;
+        float z_threshold = 10.0;
         bool enable = true;
     } filter;
 
@@ -63,7 +65,7 @@ void pointcloudCallback(const sensor_msgs::PointCloud2ConstPtr &msg)
     {
         for (const auto &point : *temp)
         {
-            if (std::abs(point.y) < g_config.filter.y_threshold)
+            if (std::abs(point.x) < g_config.filter.x_threshold && std::abs(point.y) < g_config.filter.y_threshold && std::abs(point.z) < g_config.filter.z_threshold)
             {
 
                 // 反转xyz值
@@ -190,11 +192,11 @@ void setupVisualizer(pcl::visualization::PCLVisualizer &viewer)
     // Eigen::Affine3f pose_x = Eigen::Affine3f::Identity();             // 创建单位矩阵
     // pose_x.rotate(Eigen::AngleAxisf(M_PI, Eigen::Vector3f::UnitX())); // 沿 X 轴旋转 180 度 (M_PI = 180度)
     // viewer.addCoordinateSystem(0.5, pose_x);
-    viewer.addCoordinateSystem(0.5);
-    // 添加坐标轴标签  
-    viewer.addText3D("X", pcl::PointXYZ(0.15, 0, 0), 0.05, 1.0, 0.0, 0.0, "text_X"); // 红色  
-    viewer.addText3D("Y", pcl::PointXYZ(0, 0.15, 0), 0.05, 0.0, 1.0, 0.0, "text_Y"); // 绿色  
-    viewer.addText3D("Z", pcl::PointXYZ(0, 0, 0.15), 0.05, 0.0, 0.0, 1.0, "text_Z"); // 蓝色  
+    viewer.addCoordinateSystem(0.1);
+    // 添加坐标轴标签
+    viewer.addText3D("X", pcl::PointXYZ(0.1, 0, 0), 0.01, 1.0, 0.0, 0.0, "text_X"); // 红色
+    viewer.addText3D("Y", pcl::PointXYZ(0, 0.1, 0), 0.01, 0.0, 1.0, 0.0, "text_Y"); // 绿色
+    viewer.addText3D("Z", pcl::PointXYZ(0, 0, 0.1), 0.01, 0.0, 0.0, 1.0, "text_Z"); // 蓝色
     viewer.initCameraParameters();
 }
 

@@ -17,10 +17,15 @@ def point_cloud_callback(msg):
     # 转换点云为numpy数组
     pc_data = pc2.read_points(msg, field_names=("x", "y", "z"), skip_nans=True)
     np_cloud = np.array(list(pc_data), dtype=np.float32)
-    
+    # 反转 y 坐标  
+    np_cloud[:, 1] = -np_cloud[:, 1]
+    np_cloud[:, 2] = -np_cloud[:, 2]
+    # 过滤x值在[-1,1]范围外的点
+    # filtered_cloud = np_cloud[(np_cloud[:,0] >= -0.1) & (np_cloud[:,0] <= 0.1)]
     # 过滤y值在[-1,1]范围外的点
     filtered_cloud = np_cloud[(np_cloud[:,1] >= -1) & (np_cloud[:,1] <= 1)]
-    
+    # 过滤y值在[-1,1]范围外的点
+    # filtered_cloud = np_cloud[(np_cloud[:,2] >= -0.1) & (np_cloud[:,2] <= 0.1)]s
     with data_lock:
         global current_cloud
         current_cloud = filtered_cloud
@@ -28,8 +33,8 @@ def point_cloud_callback(msg):
 def pose_callback(msg):
     global path_points
     point = [msg.poseMsg.pose.position.x,
-             msg.poseMsg.pose.position.y,
-             msg.poseMsg.pose.position.z]
+             -msg.poseMsg.pose.position.y,
+             -msg.poseMsg.pose.position.z]
     
     with data_lock:
         path_points.append(point)
