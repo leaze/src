@@ -114,6 +114,28 @@ roslaunch xv_sdk xv_sdk.launch
 rosrun rviz rviz -d `rospack find xv_sdk`/rviz/demo.rviz
 ```
 
+### mid360
+
+```shell
+# 下载Livox-SDK2（home下，任意位置皆可）
+git clone https://github.com/Livox-SDK/Livox-SDK2.git
+cd Livox-SDK2
+mkdir build
+cd build
+cmake .. && make -j8
+sudo make install
+# https://blog.csdn.net/zardforever123/article/details/134219903
+cd ~/code/catkin_ws/src
+git clone https://github.com/Livox-SDK/livox_ros_driver2.git
+cd livox_ros_driver2
+./build.sh ROS1
+# 修改/livox_ros_driver2/config/MID_360_config.jsonl
+cd ~/code/catkin_ws
+source devel/setup.bash
+roslaunch livox_ros_driver2 msg_MID360.launch
+roslaunch livox_ros_driver2 rviz_MID360.launch
+```
+
 ## Tools
 
 ### 创建自己的工作空间

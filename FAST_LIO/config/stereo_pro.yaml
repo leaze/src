@@ -18,7 +18,7 @@ common:  # 通用参数
 
 preprocess:  # LiDAR 预处理参数
     lidar_type: 2                # 1 for Livox serials LiDAR, 2 for Velodyne LiDAR, 3 for ouster LiDAR, 
-    scan_line: 32
+    scan_line: 1
     scan_rate: 10                # only need to be set for velodyne, unit: Hz,
     timestamp_unit: 2            # the unit of time/t field in the PointCloud2 rostopic: 0-second, 1-milisecond, 2-microsecond, 3-nanosecond.
     blind: 2
@@ -28,8 +28,8 @@ mapping:
     gyr_cov: 0.1                  # 角速度噪声协方差：LiDAR和IMU数据融合中角速度测量的不确定性，值设为0.1
     b_acc_cov: 0.0001             # 加速度偏置协方差：IMU加速度计的零点漂移不确定性的协方差，设为0.0001
     b_gyr_cov: 0.0001             # 角速度偏置协方差：IMU角速率计的零点漂移不确定性的协方差，设为0.1e-4（即0.0001）
-    fov_degree:    180            # 视场角度：LiDAR扫描的最大视角为180度
-    det_range:     100.0          # 检测范围：LiDAR点云数据的有效检测距离，设为100.0米
+    fov_degree:    64.3           # 视场角度：LiDAR扫描的最大视角为180度
+    det_range:     5.0          # 检测范围：LiDAR点云数据的有效检测距离，设为100.0米
     extrinsic_est_en:  false      # 外参估计功能开关：true表示启用在线计算IMU与LiDAR之间的外参数估计 # true: enable the online estimation of IMU-LiDAR extrinsic,
     extrinsic_T: [ 0, 0, 0.28]    # 外部平移矩阵T：通过校准得到的IMU与LiDAR间的相对位置偏移量
     extrinsic_R: [ 1, 0, 0, 
