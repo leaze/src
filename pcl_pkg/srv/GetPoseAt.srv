@@ -1,5 +1,0 @@
-# request
-time timestamp
----
-# response
-geometry_msgs/PoseStamped pose
