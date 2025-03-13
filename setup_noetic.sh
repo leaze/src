@@ -3,6 +3,8 @@ echo 'source /opt/ros/$ROS_DISTRO/setup.bash' >> ~/.bashrc
 # livox_ros_driver
 sudo apt update
 sudo apt install git -y
+sudo apt install gdb -y
+sudo apt install terminator -y
 git clone https://github.com/Livox-SDK/livox_ros_driver.git
 # wpr_simulation
 sudo apt install -y ros-noetic-desktop-full
@@ -16,6 +18,7 @@ sudo apt install -y ros-noetic-cv-bridge
 sudo apt install -y ros-noetic-controller-manager
 sudo apt install -y ros-noetic-hector-mapping
 sudo apt install -y ros-noetic-gmapping
+sudo apt install -y ros-noetic-ddynamic-reconfigure
 # wpb_home/wpb_home_bringup
 sudo apt install ros-noetic-teb-local-planner -y
 sudo apt-get install ros-noetic-joint-state-publisher-gui -y
