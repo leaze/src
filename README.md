@@ -161,6 +161,12 @@ roslaunch waterplus_map_tools add_waypoint_simulation.launch
 rosrun waterplus_map_tools wp_saver
 ```
 
+### 录屏
+
+```shell
+sudo apt install kazam -y
+```
+
 ### 速度控制
 
 rosrun rqt_robot_steering rqt_robot_steering

@@ -6,6 +6,8 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/visualization/pcl_visualizer.h>
 #include <boost/thread/mutex.hpp>
+#include <xv_sdk/GetDevices.h>
+#include <xv_sdk/LoadMapAndSwithcCslam.h>
 
 // 共享数据定义
 pcl::PointCloud<pcl::PointXYZ>::Ptr current_cloud(new pcl::PointCloud<pcl::PointXYZ>);

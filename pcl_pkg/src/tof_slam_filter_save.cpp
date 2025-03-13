@@ -25,6 +25,7 @@ struct SharedData
     double pose_fps = 0.0;
     ros::Time last_cloud_time;
     ros::Time last_pose_time;
+    ros::Time pose_stamp;  // 新增位姿时间戳
 
     SharedData() : cloud(new pcl::PointCloud<pcl::PointXYZ>),
                    path(new pcl::PointCloud<pcl::PointXYZ>),
@@ -96,6 +97,7 @@ void pointcloudCallback(const sensor_msgs::PointCloud2ConstPtr &msg)
     output_msg.header = msg->header; // 保持原始消息的header
     pub.publish(output_msg); // 发布处理后的点云
     boost::mutex::scoped_lock lock(g_data.mutex);
+    g_data.pose_stamp = msg->header.stamp;  // 记录时间戳
     // 更新点云数据及元信息
     g_data.cloud->swap(*filtered);
     g_data.cloud_width = msg->width;
@@ -155,6 +157,41 @@ void poseCallback(const xv_sdk::PoseStampedConfidence::ConstPtr &msg)
     }
     g_data.last_pose_time = now;
 }
+// 新增键盘回调函数
+void keyboardCallback(const pcl::visualization::KeyboardEvent& event, void*) {
+    if (event.getKeySym() == "s" && event.keyDown()) {
+        boost::mutex::scoped_lock lock(g_data.mutex);
+        
+        if (!g_data.cloud->empty() && g_data.pose_stamp.isValid()) {
+            // 生成时间戳字符串
+            const time_t raw_time = g_data.pose_stamp.sec;
+            char time_str[20];
+            strftime(time_str, 20, "%Y%m%d_%H%M%S", localtime(&raw_time));
+            // 确保目录存在
+            const std::string dir_path = "data";
+            if (!boost::filesystem::exists(dir_path)) {
+                if (!boost::filesystem::create_directory(dir_path)) {
+                    std::cerr << "Failed to create directory: " << dir_path << std::endl;
+                    return;
+                }
+            }
+            // 构造文件名
+            // std::string filename = "./data/" + std::string(time_str) + "_" + 
+            //                      std::to_string(g_data.pose_stamp.nsec) + ".pcd";
+            std::string filename = "./data/" + std::to_string(g_data.pose_stamp.sec) + "_" + 
+                                 std::to_string(g_data.pose_stamp.nsec) + ".pcd";
+            
+            // 保存点云
+            if (pcl::io::savePCDFileASCII(filename, *g_data.cloud) == 0) {
+                std::cout << "Saved: " << filename << std::endl;
+            } else {
+                std::cerr << "Save failed: " << filename << std::endl;
+            }
+        } else {
+            std::cerr << "No cloud data or invalid timestamp" << std::endl;
+        }
+    }
+}
 void drawCameraIndicator(pcl::visualization::PCLVisualizer &viewer,
                          const Eigen::Affine3f &pose)
 {
@@ -202,6 +239,7 @@ void setupVisualizer(pcl::visualization::PCLVisualizer &viewer)
     viewer.addText3D("Y", pcl::PointXYZ(0, -0.1, 0), 0.01, 0.0, 1.0, 0.0, "text_Y"); // 绿色
     viewer.addText3D("Z", pcl::PointXYZ(0, 0, -0.1), 0.01, 0.0, 0.0, 1.0, "text_Z"); // 蓝色
     viewer.initCameraParameters();
+    viewer.registerKeyboardCallback(keyboardCallback);  // 注册键盘回调
 }
 
 void updateVisualization(pcl::visualization::PCLVisualizer &viewer)

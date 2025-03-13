@@ -53,7 +53,7 @@ struct Config
     struct
     {
         float x_threshold = 10.0;
-        float y_threshold = 1.0;
+        float y_threshold = 10.0;
         float z_threshold = 10.0;
         bool enable = true;
     } filter;
@@ -226,8 +226,8 @@ void pointcloudCallback(const sensor_msgs::PointCloud2ConstPtr &msg)
             {
                 PointT p;
                 p.x = point.x;
-                p.y = -point.y; // 坐标系修正
-                p.z = -point.z;
+                p.y = point.y; // 坐标系修正
+                p.z = point.z;
                 filtered->push_back(p);
             }
         }
@@ -238,8 +238,8 @@ void pointcloudCallback(const sensor_msgs::PointCloud2ConstPtr &msg)
         {
             PointT p;
             p.x = point.x;
-            p.y = -point.y;
-            p.z = -point.z;
+            p.y = point.y;
+            p.z = point.z;
             filtered->push_back(p);
         }
     }
@@ -288,14 +288,14 @@ void poseCallback(const xv_sdk::PoseStampedConfidence::ConstPtr &msg)
 {
     Eigen::Vector3f position(
         msg->poseMsg.pose.position.x,
-        -msg->poseMsg.pose.position.y,
-        -msg->poseMsg.pose.position.z);
+        msg->poseMsg.pose.position.y,
+        msg->poseMsg.pose.position.z);
 
     Eigen::Quaternionf q_orig(
         msg->poseMsg.pose.orientation.w,
         msg->poseMsg.pose.orientation.x,
-        -msg->poseMsg.pose.orientation.y,
-        -msg->poseMsg.pose.orientation.z);
+        msg->poseMsg.pose.orientation.y,
+        msg->poseMsg.pose.orientation.z);
 
     // 坐标系修正
     static const Eigen::Quaternionf q_correct(Eigen::AngleAxisf(M_PI, Eigen::Vector3f::UnitX()));
@@ -482,7 +482,7 @@ int main(int argc, char **argv)
     // 加载参数
     pnh.param("filter/enable", g_config.filter.enable, true);
     pnh.param("filter/x_threshold", g_config.filter.x_threshold, 10.0f);
-    pnh.param("filter/y_threshold", g_config.filter.y_threshold, 1.0f);
+    pnh.param("filter/y_threshold", g_config.filter.y_threshold, 10.0f);
     pnh.param("filter/z_threshold", g_config.filter.z_threshold, 10.0f);
 
     int render_mode = static_cast<int>(g_config.render_mode);
