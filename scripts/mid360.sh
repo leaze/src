@@ -1,7 +1,7 @@
 mkdir src
 cd src
 git clone https://github.com/Livox-SDK/Livox-SDK2.git
-git clone https://github.com/Livox-SDK/livox_ros_driver2.git
+git clone https://github.com/Star-Cheng/livox_ros_driver2.git
 cd Livox-SDK2
 mkdir build
 cd build

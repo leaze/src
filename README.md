@@ -126,7 +126,7 @@ cmake .. && make -j8
 sudo make install
 # https://blog.csdn.net/zardforever123/article/details/134219903
 cd ~/code/catkin_ws/src
-git clone https://github.com/Livox-SDK/livox_ros_driver2.git
+git clone https://github.com/Star-Cheng/livox_ros_driver2.git
 cd livox_ros_driver2
 ./build.sh ROS1
 # 修改/livox_ros_driver2/config/MID_360_config.jsonl
