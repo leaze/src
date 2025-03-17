@@ -134,6 +134,10 @@ cd ~/code/catkin_ws
 source devel/setup.bash
 roslaunch livox_ros_driver2 msg_MID360.launch
 roslaunch livox_ros_driver2 rviz_MID360.launch
+# fastlio中运行mid360: https://blog.csdn.net/qq_16775293/article/details/132408005
+rosbag record -O faster_lio.bag /livox/lidar /livox/imu
+roslaunch livox_ros_driver2 msg_MID360.launch
+roslaunch fast_lio mapping_mid360.launch
 ```
 
 ## Tools

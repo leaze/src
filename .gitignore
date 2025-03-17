@@ -2,4 +2,6 @@ livox_ros_driver/livox_ros_driver/Livox-SDK
 # xv_sdk/
 build/
 devel/
+Livox-SDK2/
+livox_ros_driver2/
 

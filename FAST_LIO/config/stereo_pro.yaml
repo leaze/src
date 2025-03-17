@@ -5,8 +5,8 @@ common:  # 通用参数
     ########################################################################
     # Recore Stereo Por data:
     # rosbag record -O my_data.bag /xv_sdk/xv_dev/tof_camera/point_cloud /xv_sdk/xv_dev/imu_sensor/data_raw /xv_sdk/xv_dev/sgbm_camera/point_cloud
-    # lid_topic:  "/xv_sdk/xv_dev/tof_camera/point_cloud"  # tof data
-    lid_topic:  "/xv_sdk/xv_dev/sgbm_camera/point_cloud"  # sgbm data
+    lid_topic:  "/xv_sdk/xv_dev/tof_camera/point_cloud"  # tof data
+    # lid_topic:  "/xv_sdk/xv_dev/sgbm_camera/point_cloud"  # sgbm data
     imu_topic:  "/xv_sdk/xv_dev/imu_sensor/data_raw"
     ########################################################################
     # lid_topic:  "/kinect2/sd/points"    # gazebo.bag
@@ -31,10 +31,10 @@ mapping:
     fov_degree:    64.3           # 视场角度：LiDAR扫描的最大视角为180度
     det_range:     5.0          # 检测范围：LiDAR点云数据的有效检测距离，设为100.0米
     extrinsic_est_en:  false      # 外参估计功能开关：true表示启用在线计算IMU与LiDAR之间的外参数估计 # true: enable the online estimation of IMU-LiDAR extrinsic,
-    extrinsic_T: [ 0, 0, 0.28]    # 外部平移矩阵T：通过校准得到的IMU与LiDAR间的相对位置偏移量
-    extrinsic_R: [ 1, 0, 0, 
-                   0, 1, 0, 
-                   0, 0, 1]       # 外部旋转矩阵R：IMU与LiDAR间的相对旋转关系，此处设为单位矩阵，表示两者坐标系一致
+    extrinsic_T: [ 0.0106124, 0.000245367, 0.00660701]    # 外部平移矩阵T：通过校准得到的IMU与LiDAR间的相对位置偏移量
+    extrinsic_R: [ 0.99999, 0.00119637, -0.00426322, 
+                   -0.00125588, 0.999901, -0.0139822, 
+                   0.00424608, 0.0139874, 0.999893]       # 外部旋转矩阵R：IMU与LiDAR间的相对旋转关系，此处设为单位矩阵，表示两者坐标系一致
 
 publish:
     path_en:  false              # 轨迹发布功能开关：false表示不发布轨迹数据
