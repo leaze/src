@@ -23,9 +23,9 @@
     <node pkg="map_server" type="map_server" name="map_server" args="$(find wpr_simulation)/maps/map.yaml"/>
 
     <!--- Run AMCL -->
-    <!-- <node pkg="amcl" type="amcl" name="amcl"/> -->
+    <node pkg="amcl" type="amcl" name="amcl"/>
     <!--- Run Jie Ware -->
-    <node pkg="jie_ware" type="lidar_loc" name="lidar_loc"/> 
+    <!-- <node pkg="jie_ware" type="lidar_loc" name="lidar_loc"/>  -->
     <node pkg="rviz" type="rviz" name="rviz" args="-d $(find nav_pkg)/rviz/map_tool.rviz" />
 
     <node pkg="waterplus_map_tools" type="wp_navi_server" name="wp_navi_server" output="screen"/>
