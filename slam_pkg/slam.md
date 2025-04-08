@@ -4,6 +4,7 @@
 
 ```bash
 roslaunch slam_pkg hector.launch
+rosrun map_server map_saver -f ~/gym/code/catkin_ws/map
 ```
 
 ## gmapping
