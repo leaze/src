@@ -69,6 +69,34 @@ rivz # or roslaunch msckf_vio demo.launch
 + cd /home/gym/code/catkin_ws/src/wpb_home/wpb_home_bringup/scripts
 + ./install_for_noetic.sh
 
+### moveit
+
+```shell
+# https://blog.csdn.net/weixin_44415639/article/details/131906519
+rosdep update
+sudo apt-get update
+sudo apt-get dist-upgrade -y
+sudo apt-get install -y python3-wstool python3-catkin-tools clang-format-13
+mkdir ~/ws_moveit
+cd ~/ws_moveit 
+sudo apt install python3-wstool
+wstool init src
+wstool merge -t src https://raw.githubusercontent.com/ros-planning/moveit/master/moveit.rosinstall
+wstool update -t src
+rosdep install -y --from-paths src --ignore-src --rosdistro ${ROS_DISTRO}
+catkin config --extend /opt/ros/${ROS_DISTRO} --cmake-args -DCMAKE_BUILD_TYPE=Release 
+catkin build
+sudo apt-get install ros-noetic-moveit -y
+roslaunch panda_moveit_config demo.launch
+rosdep install --from-paths /opt/ros/noetic/share --ignore-src -y
+sudo apt-get install ros-noetic-moveit-resources
+source /opt/ros/noetic/setup.bash
+roslaunch moveit_setup_assistant setup_assistant.launch
+# 启动panda_arm
+rosrun moveit_ros_move_group move_group
+roslaunch panda_moveit_config demo.launch
+```
+
 ### Fast_LIO
 
 ```shell
