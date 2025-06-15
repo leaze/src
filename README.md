@@ -97,6 +97,18 @@ rosrun moveit_ros_move_group move_group
 roslaunch panda_moveit_config demo.launch
 ```
 
+## moveit dual arm
+
+```shell
+# https://blog.csdn.net/qq_45762996/article/details/136472543
+mkdir -p ~/dual_arm_ws/src
+cd ~/dual_arm_ws/src
+git clone https://github.com/bi3ri/dual_arm_demo.git
+git submodule update --init --recursive
+catkin build 
+echo "source $(pwd)/devel/setup.bash" >> ~/.bashrc
+```
+
 ### Fast_LIO
 
 ```shell
