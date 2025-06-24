@@ -2,6 +2,13 @@
 
 + <https://robot.czxy.com/docs/ros/outline/category/>
 
+## 清华源
+
+```shell
+pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
+-i https://pypi.tuna.tsinghua.edu.cn/simple
+```
+
 ## 启动Cat_kin
 
 ```shell

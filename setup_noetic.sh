@@ -7,6 +7,7 @@ sudo apt install gdb -y
 sudo apt install terminator -y
 git clone https://github.com/Livox-SDK/livox_ros_driver.git
 # wpr_simulation
+sudo apt install -y python3-pip
 sudo apt install -y ros-noetic-desktop-full
 sudo apt install -y ros-noetic-navigation
 sudo apt install -y ros-noetic-joy
@@ -29,6 +30,7 @@ sudo apt-get install ros-noetic-navigation -y
 sudo apt-get install ros-noetic-cv-bridge -y
 sudo apt-get install ros-noetic-audio-common -y
 sudo apt-get install ros-noetic-controller-manager -y
+sudo apt-get install ros-noetic-rosbridge-server -y
 # msckf_vio
 sudo apt-get install libsuitesparse-dev -y
 sudo apt-get install ros-noetic-random-numbers -y
