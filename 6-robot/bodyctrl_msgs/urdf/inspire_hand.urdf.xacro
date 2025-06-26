@@ -1,0 +1,89 @@
+<!-- Inspire Hand灵巧手URDF模型 -->
+<robot name="inspire_hand" xmlns:xacro="http://www.ros.org/wiki/xacro">
+    
+    <!-- 手掌 -->
+    <link name="palm">
+        <inertial>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <mass value="0.1"/>
+            <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
+        </inertial>
+        <visual>
+            <geometry>
+                <box size="0.1 0.08 0.02"/>
+            </geometry>
+            <material name="palm_color">
+                <color rgba="0.8 0.8 0.8 1"/>
+            </material>
+        </visual>
+    </link>
+    
+    <!-- 五指关节 -->
+    <xacro:macro name="finger" params="name id origin_xyz origin_rpy">
+        <!-- 基关节 -->
+        <link name="${name}_base">
+            <visual>
+                <geometry>
+                    <cylinder radius="0.005" length="0.06"/>
+                </geometry>
+                <material name="finger_color">
+                    <color rgba="0.5 0.5 0.8 1"/>
+                </material>
+            </visual>
+        </link>
+        
+        <joint name="${name}_base_joint" type="revolute">
+            <axis xyz="0 1 0"/>
+            <limit lower="0.0" upper="1.57" effort="50" velocity="10"/>
+            <parent link="palm"/>
+            <child link="${name}_base"/>
+            <origin xyz="${origin_xyz}" rpy="${origin_rpy}"/>
+        </joint>
+        
+        <!-- 指尖 -->
+        <link name="${name}_tip">
+            <visual>
+                <geometry>
+                    <sphere radius="0.008"/>
+                </geometry>
+                <material name="finger_tip_color">
+                    <color rgba="0.8 0.5 0.5 1"/>
+                </material>
+            </visual>
+        </link>
+        
+        <joint name="${name}_tip_joint" type="revolute">
+            <axis xyz="0 1 0"/>
+            <limit lower="0.0" upper="1.57" effort="50" velocity="10"/>
+            <parent link="${name}_base"/>
+            <child link="${name}_tip"/>
+            <origin xyz="0 0 0.03" rpy="0 0 0"/>
+        </joint>
+        
+        <!-- 关节状态发布器 -->
+        <transmission name="${name}_base_trans">
+            <type>transmission_interface/SimpleTransmission</type>
+            <joint name="${name}_base_joint"/>
+            <actuator name="${name}_base_motor">
+                <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+                <mechanicalReduction>1</mechanicalReduction>
+            </actuator>
+        </transmission>
+        
+        <transmission name="${name}_tip_trans">
+            <type>transmission_interface/SimpleTransmission</type>
+            <joint name="${name}_tip_joint"/>
+            <actuator name="${name}_tip_motor">
+                <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+                <mechanicalReduction>1</mechanicalReduction>
+            </actuator>
+        </transmission>
+    </xacro:macro>
+    
+    <!-- 创建五根手指 -->
+    <xacro:finger name="little" id="0" origin_xyz="0.04 0.025 0" origin_rpy="0 0 -0.5"/>
+    <xacro:finger name="ring" id="1" origin_xyz="0.03 0.01 0" origin_rpy="0 0 -0.25"/>
+    <xacro:finger name="middle" id="2" origin_xyz="0.0 0.0 0" origin_rpy="0 0 0"/>
+    <xacro:finger name="fore" id="3" origin_xyz="-0.03 0.01 0" origin_rpy="0 0 0.25"/>
+    <xacro:finger name="thumb" id="4" origin_xyz="-0.04 -0.02 0" origin_rpy="0 0 0.5"/>
+</robot>
