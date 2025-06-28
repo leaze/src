@@ -1,3 +1,13 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# vim:fenc=utf-8
+'''
+@File    :   sub_msg.py
+@Time    :   2025/06/28 19:47:07
+@Author  :   StarCheng
+@Version :   1.0
+@Site    :   https://star-cheng.github.io/Blog/
+'''
 # roslaunch rosbridge_server rosbridge_websocket.launch
 import asyncio
 import websockets

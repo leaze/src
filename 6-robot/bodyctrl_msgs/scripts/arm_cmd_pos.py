@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# vim:fenc=utf-8
 import rospy
 from bodyctrl_msgs.msg import CmdSetMotorPosition, SetMotorPosition
 from std_msgs.msg import Header
@@ -15,7 +17,7 @@ def clamp(value, min_val, max_val):
     return max(min_val, min(value, max_val))
 
 def send_arm_position():
-    pub = rospy.Publisher('/arm/set_pos', CmdSetMotorPosition, queue_size=10)
+    pub = rospy.Publisher('/arm/cmd_pos', CmdSetMotorPosition, queue_size=10)
     rospy.init_node('arm_position_commander', anonymous=True)
     rate = rospy.Rate(10)  # 10Hz
     

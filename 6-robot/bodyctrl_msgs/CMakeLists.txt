@@ -55,6 +55,9 @@ add_message_files(
   MotorStatusMsg.msg
   SetMotorPosition.msg
   CmdSetMotorPosition.msg
+  MotorStatus1.msg
+  MotorStatusMsg1.msg
+  NodeState.msg
 )
 
 ## Generate services in the 'srv' folder
