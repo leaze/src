@@ -8,7 +8,7 @@ if __name__ == "__main__":
 
     # 初始关节角度
     left_joints = [0.0, 0.0, 0.0, -1.57, 0.0, 0.0, 0.0]
-    right_joints = [0.0, -0.0, 0.0, -0.0, 0.0, 0.0, 0.0]
+    right_joints = [0.0, -0.0, 0.0, -1.57, 0.0, 0.0, 0.0]
 
     # 1. 正向运动学：计算末端位姿（位置和方向）
     left_pos, left_rot, left_quat = left_arm.forward_kinematics(left_joints)

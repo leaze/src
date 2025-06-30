@@ -174,13 +174,13 @@ if __name__ == "__main__":
         print(f"Quaternion: {np.array_str(quat, precision=4, suppress_small=True)}")
 
         # 使用上一步的解作为初始值
-        joints = left_arm.inverse_kinematics(pos, quat, prev_joints)
+        joints = left_arm.inverse_kinematics(pos, left_end_quat, prev_joints)
 
         if joints is None:
             print("Warning: IK failed - using previous joints")
             joints = prev_joints
         else:
-            prev_joints = joints
+            prev_joints = start_joints
 
         joint_trajectory.append(joints)
 
@@ -189,6 +189,7 @@ if __name__ == "__main__":
         all_positions.append(calc_pos)
 
         print(f"FK Position: {np.array_str(calc_pos, precision=4, suppress_small=True)}")
+        print("Joint Angles (rad):", np.array(joints).round(2))
         print("Joint Angles (deg):", np.rad2deg(joints).round(2))
 
     # 可视化笛卡尔空间轨迹

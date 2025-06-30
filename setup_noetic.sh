@@ -11,6 +11,7 @@ sudo apt install -y python3-pip
 sudo apt install -y ros-noetic-desktop-full
 sudo apt install -y ros-noetic-navigation
 sudo apt install -y ros-noetic-joy
+sudo apt install -y ros-noetic-ros-control
 sudo apt install -y ros-noetic-gazebo-ros-control
 sudo apt install -y ros-noetic-joint-state-controller
 sudo apt install -y ros-noetic-position-controllers
