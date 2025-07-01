@@ -61,11 +61,16 @@ add_message_files(
 )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+add_service_files(
+  FILES
+  set_angle_flexible.srv
+  set_angle.srv
+  set_clear_error.srv
+  set_force.srv
+  set_speed.srv
+  set_angle.srv
+  SetMotorZeroOffset.srv
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(

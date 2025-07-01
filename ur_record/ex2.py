@@ -204,15 +204,29 @@ class ArmController:
             self.left_joint_positions = traj_left[i].tolist()
             self.right_joint_positions = traj_right[i].tolist()
             rospy.sleep(time_per_point)
-
+    def move_forward(self, distance: float):
+        """前进指定距离"""
+        left_start_pos_, left_start_rot_, left_start_quat_ = self.arm_kinematics[True].forward_kinematics(self.left_joint_positions)
+        right_start_pos_, right_start_rot_, right_start_quat_ = self.arm_kinematics[False].forward_kinematics(self.right_joint_positions)
+        # 计算新的目标位置
+        left_target_pos_ = left_start_pos_ + distance * np.array([1, 0, 0])  # 向前移动
+        right_target_pos_ = right_start_pos_ + distance * np.array([1, 0, 0])  # 向前移动
+        # 使用相同的姿态
+        left_target_quat_ = left_start_quat_
+        right_target_quat_ = right_start_quat_
+        # 执行移动
+        self.move_dual_arm(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
+        # 打印调试信息
+        print("Moving forward by distance:", distance)  
     def control_loop(self):
         left_target_pos_ = [0.28298403, 0.24302717, 0.06437022]
         left_target_quat_ = [0.706715, 0.03085568, -0.70615245, -0.03083112]
         right_target_pos_ = [0.28298403, -0.18722009, 0.05216848]
         right_target_quat_ = [0.706715, 0.03085568, -0.70615245, -0.03083112]
-        self.move_dual_arm(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
+        # self.move_dual_arm(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
         # self.move_single_arm(True, left_target_pos_, left_target_quat_)
         # self.move_single_arm(False, right_target_pos_, right_target_quat_)
+        self.move_forward(0.05)
 
     def run(self):
         """启动控制器"""

@@ -1,8 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# vim:fenc=utf-8
+'''
+@File    :   hand_controller.py
+@Time    :   2025/07/01 13:28:45
+@Author  :   StarCheng
+@Version :   1.0
+@Site    :   https://star-cheng.github.io/Blog/
+'''
 import rospy
 import numpy as np
 from sensor_msgs.msg import JointState
+from std_msgs.msg import String
 
 class InspireHand:
     """灵巧手控制类"""
@@ -45,21 +54,11 @@ class InspireHand:
             JointState, 
             self.hand_info_callback
         )
-        # rospy.Subscriber(
-        #     f'/inspire_hand/cmd_velocity/{hand_side}_hand', 
-        #     Float64MultiArray, 
-        #     self.velocity_cmd_callback
-        # )
-        # rospy.Subscriber(
-        #     f'/inspire_hand/cmd_force/{hand_side}_hand', 
-        #     Float64MultiArray, 
-        #     self.force_cmd_callback
-        # )
-        # rospy.Subscriber(
-        #     f'/inspire_hand/cmd_gesture', 
-        #     String, 
-        #     self.gesture_cmd_callback
-        # )
+        rospy.Subscriber(
+            f'/inspire_hand/cmd_gesture', 
+            String, 
+            self.gesture_cmd_callback
+        )
         
         rospy.loginfo(f"{hand_side.capitalize()} hand controller initialized")
     
@@ -113,7 +112,7 @@ class InspireHand:
         # 发布消息
         self.state_pub.publish(state_msg)
     
-    def hand_info_callback(self, msg):
+    def hand_info_callback(self, msg:JointState):
         """位置命令回调函数"""
         # if len(msg) != 6:
         #     rospy.logwarn(f"Invalid position command size: {len(msg)} instead of 6")
@@ -126,25 +125,9 @@ class InspireHand:
         rospy.loginfo(f"Velocity command received: {self.velocity}")
         rospy.loginfo(f"Force command received: {self.effort}")
     
-    def velocity_cmd_callback(self, msg):
-        """速度命令回调函数"""
-        if len(msg.data) != 6:
-            rospy.logwarn(f"Invalid velocity command size: {len(msg.data)} instead of 6")
-            return
-        
-        rospy.loginfo(f"Velocity command received: {list(msg.data)}")
-        # 在实际系统中，这里会控制手指的速度
     
-    def force_cmd_callback(self, msg):
-        """力命令回调函数"""
-        if len(msg.data) != 6:
-            rospy.logwarn(f"Invalid force command size: {len(msg.data)} instead of 6")
-            return
-        
-        rospy.loginfo(f"Force command received: {list(msg.data)}")
-        # 在实际系统中，这里会控制手指的抓取力
     
-    def gesture_cmd_callback(self, msg):
+    def gesture_cmd_callback(self, msg:String):
         """手势命令回调函数"""
         gesture = msg.data.lower()
         rospy.loginfo(f"Gesture command received: {gesture}")
