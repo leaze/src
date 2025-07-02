@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  geometry_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -58,18 +59,15 @@ add_message_files(
   MotorStatus1.msg
   MotorStatusMsg1.msg
   NodeState.msg
+  Euler.msg
+  Imu.msg
 )
 
 ## Generate services in the 'srv' folder
 add_service_files(
   FILES
-  set_angle_flexible.srv
   set_angle.srv
   set_clear_error.srv
-  set_force.srv
-  set_speed.srv
-  set_angle.srv
-  SetMotorZeroOffset.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -83,6 +81,7 @@ add_service_files(
 generate_messages(
   DEPENDENCIES
   std_msgs
+  geometry_msgs
 )
 
 ################################################

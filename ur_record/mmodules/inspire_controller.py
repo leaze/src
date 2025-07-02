@@ -35,3 +35,33 @@ class InspireController:
         left_success = self.left_hand_controller.set_angles(left_angles)
         right_success = self.right_hand_controller.set_angles(right_angles)
         return left_success, right_success
+    
+    def grip_single_hand(self, is_left:bool) -> bool:
+        """
+        握住单只手
+        :param is_left: 是否为左手
+        :return: 是否成功
+        """
+        return self.move_single_hand(is_left, [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+    
+    def grip_both_hands(self) -> tuple:
+        """
+        握住双只手
+        :return: 是否成功
+        """
+        return self.move_both_hands([0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+    
+    def release_single_hand(self, is_left:bool) -> bool:
+        """
+        松开单只手
+        :param is_left: 是否为左手
+        :return: 是否成功
+        """
+        return self.move_single_hand(is_left, [1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+    
+    def release_both_hands(self) -> tuple:
+        """
+        松开双只手
+        :return: 是否成功
+        """
+        return self.move_both_hands([1.0, 1.0, 1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
