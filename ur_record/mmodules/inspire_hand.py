@@ -33,7 +33,7 @@ class InspireHandController:
         )
         
         # 初始化服务代理（等待服务就绪）
-        # rospy.wait_for_service(f"{self.namespace}/set_angle")
+        # rospy.wait_for_service(f"{self.hand}/set_angle")
 
         # 角度设置服务代理
         self.set_angle_service = rospy.ServiceProxy(f"/inspire_hand/set_angle/{self.hand}",set_angle)
