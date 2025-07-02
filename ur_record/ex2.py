@@ -39,11 +39,11 @@ class ArmController:
         self.left_joint_positions = [0.0, 0.0, 0.0, -0.0, 0.0, 0.0, 0.0]
         self.right_joint_positions = [0.0, -0.0, 0.0, -0.0, 0.0, 0.0, 0.0]
         self.dual_joint_positions = [self.right_joint_positions, self.left_joint_positions]
-        self.left_end_effector_pose, self.right_end_effector_rota, self.left_end_effector_quat = (
-            self.arm_left_kinematics.forward_kinematics(self.left_joint_positions)
+        self.left_end_effector_pose, self.right_end_effector_rota, self.left_end_effector_quat = self.arm_left_kinematics.forward_kinematics(
+            self.left_joint_positions
         )
-        self.right_end_effector_pose, self.right_end_effector_rota, self.right_end_effector_quat = (
-            self.arm_right_kinematics.forward_kinematics(self.right_joint_positions)
+        self.right_end_effector_pose, self.right_end_effector_rota, self.right_end_effector_quat = self.arm_right_kinematics.forward_kinematics(
+            self.right_joint_positions
         )
         self.joint_names = {True: [i for i in range(11, 18)], False: [j for j in range(21, 28)]}
 
@@ -90,11 +90,11 @@ class ArmController:
         self.left_joint_status["error"] = error_ls_
 
     def send_arm_cmd_pos(self, name_: int, pos_: float, spd_: float, cur_: float):
-        """ 发送单个关节的目标位置命令
+        """发送单个关节的目标位置命令
         :param name_: 关节名称 (int)
         :param pos_: 目标位置 (float, 弧度)
         :param spd_: 目标速度 (float, RPM)
-        :param cur_: 目标电流 (float, 安培) 
+        :param cur_: 目标电流 (float, 安培)
         """
         # 创建命令消息
         cmd_msg_ = CmdSetMotorPosition()
@@ -106,11 +106,11 @@ class ArmController:
         self.arm_cmd_pos_pub.publish(cmd_msg_)
 
     def send_arms_cmd_pos(self, name_ls: List[int], pos_ls: List[float], spd_ls: List[float], cur_ls: List[float]):
-        """ 发送多个关节的目标位置命令
+        """发送多个关节的目标位置命令
         :param name_ls: 关节名称 (list)
         :param pos_ls: 目标位置 (list, 弧度)
         :param spd_ls: 目标速度 (list, RPM)
-        :param cur_ls: 目标电流 (list, 安培) 
+        :param cur_ls: 目标电流 (list, 安培)
         """
         if len(name_ls) != len(pos_ls) or len(name_ls) != len(spd_ls) or len(name_ls) != len(cur_ls):
             rospy.logerr("The length of name_ls, pos_ls, spd_ls, cur_ls must be equal.")

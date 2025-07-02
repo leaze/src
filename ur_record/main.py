@@ -23,10 +23,12 @@ class RobotController:
 if __name__ == "__main__":
     rospy.init_node("RobotControllerNode")
     robot_controller = RobotController()
-    robot_controller.arm_controller.init_arm_status()
-    robot_controller.hand_controller.init_hand_status()
-    move_success = robot_controller.arm_controller.run()
-    rospy.loginfo(f"Arm Movement Status: {move_success}")
+    arm_init_success = robot_controller.arm_controller.init_arm_status()
+    rospy.loginfo(f"Arm Initialization Status: {arm_init_success}")
+    hand_init_success = robot_controller.hand_controller.init_hand_status()
+    rospy.loginfo(f"Hand Initialization Status: {hand_init_success}")
+    move_success = robot_controller.arm_controller.control_loop()
+    rospy.loginfo(f"Arm Control Loop Status: {move_success}")
     if move_success:
         left_grip_success, right_grip_success = robot_controller.hand_controller.grip_both_hands()
         rospy.loginfo(f"Left Hand Grip Status: {left_grip_success}, Right Hand Grip Status: {right_grip_success}")

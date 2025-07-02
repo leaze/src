@@ -8,7 +8,8 @@
 @Version :   1.0
 @Site    :   https://star-cheng.github.io/Blog/
 '''
-from inspire_hand import InspireHandController
+from mmodules.inspire_hand import InspireHandController
+import numpy as np
 import rospy
 
 class InspireController:
@@ -16,6 +17,10 @@ class InspireController:
         self.left_hand_controller = InspireHandController(is_left=True)
         self.right_hand_controller = InspireHandController(is_left=False)
         self.hand_controller = [self.right_hand_controller, self.left_hand_controller]
+        self.angle_tolerance = 0.01  # 角度容忍度
+        self.left_init_position = [1.0, 1.0, 1.0, 1.0, 1.0, 0.0]
+        self.right_init_position = [1.0, 1.0, 1.0, 1.0, 1.0, 0.0]
+        # self.init_hand_status()
         rospy.sleep(0.1)
     
     def move_single_hand(self, is_left:bool, angles:list) -> bool:
@@ -72,8 +77,16 @@ class InspireController:
         初始化手的状态
         :return: None
         """
-        left_success = self.left_hand_controller.set_angles([1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
-        right_success = self.right_hand_controller.set_angles([1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
-        rospy.loginfo("Inspire Hand Controller Initialized")
-        rospy.sleep(0.1)
-        return left_success and right_success
+        left_success = self.left_hand_controller.set_angles(self.left_init_position)
+        right_success = self.right_hand_controller.set_angles(self.right_init_position)
+        rospy.loginfo("Inspire Hand Controller Initializing...")
+        rospy.sleep(1)
+        if self.left_hand_controller.position is None or self.right_hand_controller.position is None:
+            rospy.logerr("Hand position not initialized properly")
+            return False
+        else:
+            left_hand_error_ = np.linalg.norm(np.array(self.left_hand_controller.position) - np.array(self.left_init_position))
+            right_hand_error_ = np.linalg.norm(np.array(self.right_hand_controller.position) - np.array(self.right_init_position))
+            hand_error_ = (left_hand_error_ + right_hand_error_) / 2.0
+            rospy.loginfo(f"Left Hand Status: {left_hand_error_}, Right Hand Status: {right_hand_error_}")
+            return hand_error_ < self.angle_tolerance

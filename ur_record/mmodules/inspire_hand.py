@@ -14,7 +14,6 @@ import rospy
 
 class InspireHandController:
     def __init__(self, is_left=True):
-        rospy.init_node('inspire_hand_controller')
         """
         Inspire Hand ROS控制器
         :param hand: 'left' 或 'right'，指定控制的手
@@ -95,6 +94,7 @@ class InspireHandController:
 
 # 使用示例
 if __name__ == "__main__":
+    rospy.init_node('inspire_hand_controller')
     # 创建右手控制器
     right_hand = InspireHandController(is_left=False)
     # 获取五指状态

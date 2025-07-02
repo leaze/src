@@ -1,6 +1,9 @@
 # rosbridge
 
+<https://zhuanlan.zhihu.com/p/1898754514762313760>
+
 ```shell
+
 # 环境安装
 sudo apt install ros-${ROS_DISTRO}-rosbridge-server -y
 pip3 install websockets -i https://pypi.tuna.tsinghua.edu.cn/simple
