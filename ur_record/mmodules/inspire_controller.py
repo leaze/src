@@ -16,6 +16,7 @@ class InspireController:
         self.left_hand_controller = InspireHandController(is_left=True)
         self.right_hand_controller = InspireHandController(is_left=False)
         self.hand_controller = [self.right_hand_controller, self.left_hand_controller]
+        rospy.sleep(0.1)
     
     def move_single_hand(self, is_left:bool, angles:list) -> bool:
         """
@@ -65,3 +66,14 @@ class InspireController:
         :return: 是否成功
         """
         return self.move_both_hands([1.0, 1.0, 1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+    
+    def init_hand_status(self):
+        """
+        初始化手的状态
+        :return: None
+        """
+        left_success = self.left_hand_controller.set_angles([1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+        right_success = self.right_hand_controller.set_angles([1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+        rospy.loginfo("Inspire Hand Controller Initialized")
+        rospy.sleep(0.1)
+        return left_success and right_success

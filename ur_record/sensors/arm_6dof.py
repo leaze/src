@@ -19,6 +19,7 @@ class Arm6Dof():
         self.arm_6dof_left_sub = rospy.Subscriber("/arm_6dof_left", WrenchStamped, self.arm_6dof_left_callback)
         self.arm_6dof_right_sub = rospy.Subscriber("/arm_6dof_right", WrenchStamped, self.arm_6dof_right_callback)
         self.arm_6dof_timer = rospy.Timer(rospy.Duration(1), self.print_status_callback)
+        rospy.sleep(0.1)
 
     def arm_6dof_left_callback(self, msg: WrenchStamped):
         self.arm_6dof_left_status = [msg.wrench.force.x, msg.wrench.force.y, msg.wrench.force.z, msg.wrench.torque.x, msg.wrench.torque.y, msg.wrench.torque.z]
