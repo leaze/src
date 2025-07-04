@@ -211,3 +211,5 @@ planning_scene.add_object(collision_object)
   + [x] 2.3 控制双臂同步运动到指定位置
   + [ ] 2.4 控制夹爪移动到纸箱顶点
   + [x] 2.5 控制双臂抬起纸箱
++ [ ] 3 调度
+  + [ ] 3.1 导航到指定位置 nav_rosbridge类的接口

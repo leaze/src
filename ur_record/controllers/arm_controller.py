@@ -205,7 +205,7 @@ class ArmController:
         # 同步执行双臂移动
         for i in range(n_points):
             # 合并左右臂的所有关节命令
-            all_joint_names = self.joint_names[False] + self.joint_names[True]
+            all_joint_names = self.joint_names[True] + self.joint_names[False]
             all_positions = traj_right_joints_[i].tolist() + traj_left_joints_[i].tolist()
 
             # 设置速度(根据位置差自适应调整)
@@ -302,7 +302,7 @@ class ArmController:
             rospy.logerr(f"Invalid direction: {direction}. Use 'forward', 'backward', 'up', or 'down'.")
 
     def init_arm_status(self):
-        all_joint_names = self.joint_names[False] + self.joint_names[True]
+        all_joint_names = self.joint_names[True] + self.joint_names[False]
         all_positions = [0.0] * 14  # 初始化所有关节位置为0
         speeds = [self.joint_speed] * 14
         currents = [self.joint_current] * 14

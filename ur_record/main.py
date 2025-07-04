@@ -46,11 +46,11 @@ class RobotController:
         pass
 
     def place_box(self):
-        # 这里可以添加放置纸箱的逻辑
+        # 置纸箱的逻辑
         pass
 
     def lift_box(self, distance):
-        # 这里可以添加向上移动的逻辑
+        # 向上移动的逻辑
         return self.arm_controller.move_up(distance)
 
 if __name__ == "__main__":
