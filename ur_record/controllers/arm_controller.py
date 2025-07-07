@@ -130,6 +130,23 @@ class ArmController:
             cmd_msgs_.cmds.append(cmd)
         self.arm_cmd_pos_pub.publish(cmd_msgs_)
 
+    def rotate_single_joint(self, is_left: bool, joint_name: int, rotate_angle: float):
+        """旋转关节
+        :param is_left: 是否为左臂 (bool)
+        :param joint_name: 关节名称 (int), 这里填0-6即可, 分别对于7个关节
+        :param joint_angles: 关节角度 (list, 弧度)
+        """
+        self.send_arm_cmd_pos(self.joint_names[is_left][joint_name], self.dual_joint_positions[is_left][joint_name] + rotate_angle, self.joint_speed, self.joint_current)
+        rotate_time = min(rotate_angle / self.joint_speed, self.tr_point_time)
+        rospy.sleep(rotate_time)
+        rotate_error = abs(self.dual_joint_positions[is_left][joint_name] + rotate_angle - self.dual_joint_positions[is_left][joint_name])
+        rotate_status = rotate_error < self.joint_tolerance
+        if rotate_status:
+            rospy.loginfo("Rotate Joint %s %s: %s" % (self.joint_names[is_left][joint_name], rotate_angle, rotate_status))
+        else:
+            rospy.logerr("Rotate Joint %s %s: %s" % (self.joint_names[is_left][joint_name], rotate_angle, rotate_status))
+        return rotate_status
+
     def set_end_effector_target(self, is_left: bool, target_pos: list, target_ori: list, use_matrix=False):
         # 生成轨迹(2厘米生成一个点, 减少数量以加快计算)
         start_pos, start_rot, start_quat = self.arm_kinematics[is_left].forward_kinematics(self.dual_joint_positions[is_left])
@@ -229,8 +246,58 @@ class ArmController:
         left_true_error2_ = np.linalg.norm(np.array(left_target_pos) - np.array(self.left_end_effector_pose))  # 左臂实际末端位置误差
         right_plan_error_ = np.linalg.norm(np.array(right_target_pos) - np.array(traj_right_positions_[-1]))  # 右臂规划误差
         right_true_error2_ = np.linalg.norm(np.array(right_target_pos) - np.array(self.right_end_effector_pose))  # 右臂实际末端位置误差
+        left_arm_move_status, right_arm_move_status = left_true_error2_ < self.joint_tolerance, right_true_error2_ < self.joint_tolerance
+        # rospy.loginfo("Arm Move Success") if left_arm_move_status and right_arm_move_status else rospy.loginfo("Arm Move Failed")
 
         return left_true_error2_ < self.joint_tolerance, right_true_error2_ < self.joint_tolerance
+
+    def move_single_forward(self, is_left: bool, distance: float) -> bool:
+        """移动单只臂"""
+        start_pos_, start_rot_, start_quat_ = self.arm_kinematics[is_left].forward_kinematics(self.left_joint_positions)
+        left_target_pos_ = start_pos_ + distance * np.array([1, 0, 0])  # 向前移动
+        move_forward_single_success = self.move_single_arm(is_left, left_target_pos_, start_quat_)
+        rospy.loginfo("Move Single Arm Forward Success") if move_forward_single_success else rospy.loginfo("Move Single Arm Forward Failed")
+        return move_forward_single_success
+    
+    def move_single_backward(self, is_left: bool, distance: float) -> bool:
+        """移动单只臂"""
+        start_pos_, start_rot_, start_quat_ = self.arm_kinematics[is_left].forward_kinematics(self.left_joint_positions)
+        left_target_pos_ = start_pos_ - distance * np.array([1, 0, 0])  # 向后移动
+        move_backward_single_success = self.move_single_arm(is_left, left_target_pos_, start_quat_)
+        rospy.loginfo("Move Single Arm Backward Success") if move_backward_single_success else rospy.loginfo("Move Single Arm Backward Failed")
+        return move_backward_single_success
+    
+    def move_single_up(self, is_left: bool, distance: float) -> bool:
+        """移动单只臂"""
+        start_pos_, start_rot_, start_quat_ = self.arm_kinematics[is_left].forward_kinematics(self.left_joint_positions)
+        left_target_pos_ = start_pos_ + distance * np.array([0, 0, 1])  # 向上移动
+        move_up_single_success = self.move_single_arm(is_left, left_target_pos_, start_quat_)
+        rospy.loginfo("Move Single Arm Up Success") if move_up_single_success else rospy.loginfo("Move Single Arm Up Failed")
+        return move_up_single_success
+
+    def move_single_down(self,  is_left: bool, distance: float) -> bool:
+        """移动单只臂"""
+        start_pos_, start_rot_, start_quat_ = self.arm_kinematics[is_left].forward_kinematics(self.left_joint_positions)
+        left_target_pos_ = start_pos_ - distance * np.array([0, 0, 1])  # 向下移动
+        move_down_single_success = self.move_single_arm(is_left, left_target_pos_, start_quat_)
+        rospy.loginfo("Move Single Arm Down Success") if move_down_single_success else rospy.loginfo("Move Single Arm Down Failed")
+        return move_down_single_success
+    
+    def move_single_left(self, is_left: bool, distance: float) -> bool:
+        """移动单只臂"""
+        start_pos_, start_rot_, start_quat_ = self.arm_kinematics[is_left].forward_kinematics(self.left_joint_positions)
+        left_target_pos_ = start_pos_ - distance * np.array([0, 1, 0])  # 向左移动
+        move_left_single_success = self.move_single_arm(is_left, left_target_pos_, start_quat_)
+        rospy.loginfo("Move Single Arm Left Success") if move_left_single_success else rospy.loginfo("Move Single Arm Left Failed")
+        return move_left_single_success
+    
+    def move_single_right(self, is_left: bool, distance: float) -> bool:
+        """移动单只臂"""
+        start_pos_, start_rot_, start_quat_ = self.arm_kinematics[is_left].forward_kinematics(self.left_joint_positions)
+        left_target_pos_ = start_pos_ + distance * np.array([0, 1, 0])  # 向右移动
+        move_right_single_success = self.move_single_arm(is_left, left_target_pos_, start_quat_)
+        rospy.loginfo("Move Single Arm Right Success") if move_right_single_success else rospy.loginfo("Move Single Arm Right Failed")
+        return move_right_single_success
 
     def move_forward(self, distance: float):
         """前进指定距离"""
@@ -243,24 +310,13 @@ class ArmController:
         left_target_quat_ = left_start_quat_
         right_target_quat_ = right_start_quat_
         # 执行移动
-        self.move_dual_arm(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
+        move_forward_left_success, move_forward_right_success = self.move_dual_arm(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
         # 打印调试信息
+        rospy.loginfo("Moved forward successfully") if move_forward_left_success and move_forward_right_success else rospy.logerr("Failed to move forward")
+        return move_forward_left_success and move_forward_right_success
 
-    def move_up(self, distance: float):
-        """向上移动指定距离"""
-        left_start_pos_, left_start_rot_, left_start_quat_ = self.arm_kinematics[True].forward_kinematics(self.left_joint_positions)
-        right_start_pos_, right_start_rot_, right_start_quat_ = self.arm_kinematics[False].forward_kinematics(self.right_joint_positions)
-        # 计算新的目标位置
-        left_target_pos_ = left_start_pos_ + distance * np.array([0, 0, 1])  # 向上移动
-        right_target_pos_ = right_start_pos_ + distance * np.array([0, 0, 1])  # 向上移动
-        # 使用相同的姿态
-        left_target_quat_ = left_start_quat_
-        right_target_quat_ = right_start_quat_
-        # 执行移动
-        self.move_dual_arm(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
-        # 打印调试信息
 
-    def move_backward(self, distance: float):
+    def move_backward(self, distance: float) -> bool:
         """后退指定距离"""
         left_start_pos_, left_start_rot_, left_start_quat_ = self.arm_kinematics[True].forward_kinematics(self.left_joint_positions)
         right_start_pos_, right_start_rot_, right_start_quat_ = self.arm_kinematics[False].forward_kinematics(self.right_joint_positions)
@@ -271,10 +327,28 @@ class ArmController:
         left_target_quat_ = left_start_quat_
         right_target_quat_ = right_start_quat_
         # 执行移动
-        self.move_dual_arm(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
+        move_backward_left_success, move_backward_right_success = self.move_dual_arm(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
         # 打印调试信息
+        rospy.loginfo("Moved backward successfully") if move_backward_left_success and move_backward_right_success else rospy.logerr("Moved backward Failed")
+        return move_backward_left_success and move_backward_right_success
 
-    def move_down(self, distance: float):
+    def move_up(self, distance: float) -> bool:
+        """向上移动指定距离"""
+        left_start_pos_, left_start_rot_, left_start_quat_ = self.arm_kinematics[True].forward_kinematics(self.left_joint_positions)
+        right_start_pos_, right_start_rot_, right_start_quat_ = self.arm_kinematics[False].forward_kinematics(self.right_joint_positions)
+        # 计算新的目标位置
+        left_target_pos_ = left_start_pos_ + distance * np.array([0, 0, 1])  # 向上移动
+        right_target_pos_ = right_start_pos_ + distance * np.array([0, 0, 1])  # 向上移动
+        # 使用相同的姿态
+        left_target_quat_ = left_start_quat_
+        right_target_quat_ = right_start_quat_
+        # 执行移动
+        move_up_left_success, move_up_right_success = self.move_dual_arm(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
+        rospy.loginfo("Moved up successfully") if move_up_left_success and move_up_right_success else rospy.logerr("Moved up Failed")
+        # 打印调试信息
+        return move_up_left_success and move_up_right_success
+
+    def move_down(self, distance: float) -> bool:
         """向下移动指定距离"""
         left_start_pos_, left_start_rot_, left_start_quat_ = self.arm_kinematics[True].forward_kinematics(self.left_joint_positions)
         right_start_pos_, right_start_rot_, right_start_quat_ = self.arm_kinematics[False].forward_kinematics(self.right_joint_positions)
@@ -285,23 +359,61 @@ class ArmController:
         left_target_quat_ = left_start_quat_
         right_target_quat_ = right_start_quat_
         # 执行移动
-        self.move_dual_arm(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
+        move_down_left_success, move_down_right_success = self.move_dual_arm(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
         # 打印调试信息
+        rospy.loginfo("Moved down successfully") if move_down_left_success and move_down_right_success else rospy.logerr("Moved down Failed")
+        return move_down_left_success and move_down_right_success
+
+    def move_left(self, distance: float):
+        """向左移动指定距离"""
+        left_start_pos_, left_start_rot_, left_start_quat_ = self.arm_kinematics[True].forward_kinematics(self.left_joint_positions)
+        right_start_pos_, right_start_rot_, right_start_quat_ = self.arm_kinematics[False].forward_kinematics(self.right_joint_positions)
+        # 计算新的目标位置
+        left_target_pos_ = left_start_pos_ - distance * np.array([0, 1, 0])
+        right_target_pos_ = right_start_pos_ - distance * np.array([0, 1, 0])
+        # 使用相同的姿态
+        left_target_quat_ = left_start_quat_
+        right_target_quat_ = right_start_quat_
+        # 执行移动
+        move_left_success, move_right_success = self.move_dual_arm(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
+        rospy.loginfo("Moved left successfully") if move_left_success and move_right_success else rospy.logerr("Moved left Failed")
+        return move_left_success and move_right_success
+
+    def move_right(self, distance: float):
+        """向右移动指定距离"""
+        left_start_pos_, left_start_rot_, left_start_quat_ = self.arm_kinematics[True].forward_kinematics(self.left_joint_positions)
+        right_start_pos_, right_start_rot_, right_start_quat_ = self.arm_kinematics[False].forward_kinematics(self.right_joint_positions)
+        # 计算新的目标位置
+        left_target_pos_ = left_start_pos_ + distance * np.array([0, 1, 0])
+        right_target_pos_ = right_start_pos_ + distance * np.array([0, 1, 0])
+        # 使用相同的姿态
+        left_target_quat_ = left_start_quat_
+        right_target_quat_ = right_start_quat_
+        # 执行移动
+        move_right_success, move_left_success = self.move_dual_arm(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
+        rospy.loginfo("Moved right successfully") if move_right_success and move_left_success else rospy.logerr("Moved right Failed")
+        return move_right_success and move_left_success
 
     def moves(self, distance: float, direction: str):
         """根据方向移动指定距离"""
         if direction == "forward":
-            self.move_forward(distance)
+            return self.move_forward(distance)
         elif direction == "backward":
-            self.move_backward(distance)
+            return self.move_backward(distance)
         elif direction == "up":
-            self.move_up(distance)
+            return self.move_up(distance)
         elif direction == "down":
-            self.move_down(distance)
+            return self.move_down(distance)
+        elif direction == "left":
+            return self.move_left(distance)
+        elif direction == "right":
+            return self.move_right(distance)
         else:
             rospy.logerr(f"Invalid direction: {direction}. Use 'forward', 'backward', 'up', or 'down'.")
+            return False
 
     def init_arm_status(self):
+        rospy.loginfo("Arm Controller Initializing...")
         all_joint_names = self.joint_names[True] + self.joint_names[False]
         all_positions = [0.0] * 14  # 初始化所有关节位置为0
         speeds = [self.joint_speed] * 14
@@ -309,7 +421,7 @@ class ArmController:
         self.send_arms_cmd_pos(all_joint_names, all_positions, speeds, currents)
         rospy.sleep(1.0)
         dual_joint_error_ = np.linalg.norm(np.array(self.left_joint_positions + self.right_joint_positions) - np.array(all_positions))
-        rospy.loginfo(f"Initialized arm status, dual joint error: {dual_joint_error_:.4f}")
+        rospy.loginfo(f"Arm Initialization Status: {dual_joint_error_ < self.joint_tolerance}, dual joint error: {dual_joint_error_:.4f}")
         return dual_joint_error_ < self.joint_tolerance
 
     def control_loop(self):

@@ -48,14 +48,20 @@ class InspireController:
         :param is_left: 是否为左手
         :return: 是否成功
         """
-        return self.move_single_hand(is_left, [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        # 打印调试信息
+        grip_single_hand_status = self.move_single_hand(is_left, [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        rospy.loginfo("Single hand moved successfully") if grip_single_hand_status else rospy.logerr("Single hand moved failed")
+        return grip_single_hand_status
     
-    def grip_both_hands(self) -> tuple:
+    def grip_both_hands(self) -> bool:
         """
         握住双只手
         :return: 是否成功
         """
-        return self.move_both_hands([0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        # 打印调试信息
+        grip_left_hands_status, grip_right_hands_status = self.move_both_hands([0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        rospy.loginfo("Both hands grip successfully") if grip_left_hands_status and grip_right_hands_status else rospy.logerr("Both hands grip failed")
+        return grip_left_hands_status and grip_right_hands_status
     
     def release_single_hand(self, is_left:bool) -> bool:
         """
@@ -63,14 +69,20 @@ class InspireController:
         :param is_left: 是否为左手
         :return: 是否成功
         """
-        return self.move_single_hand(is_left, [1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+        # 打印调试信息
+        release_single_hand_status = self.move_single_hand(is_left, [1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+        rospy.loginfo("Single hand released successfully") if release_single_hand_status else rospy.logerr("Single hand release failed")
+        return release_single_hand_status
     
-    def release_both_hands(self) -> tuple:
+    def release_both_hands(self) -> bool:
         """
         松开双只手
         :return: 是否成功
         """
-        return self.move_both_hands([1.0, 1.0, 1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+        # 打印调试信息
+        release_left_hand_status, release_right_hand_status = self.move_both_hands([1.0, 1.0, 1.0, 1.0, 1.0, 1.0], [1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+        rospy.loginfo("Release both hands successfully") if release_left_hand_status and release_right_hand_status else rospy.logerr("Release both hands failed")
+        return release_left_hand_status and release_right_hand_status
     
     def init_hand_status(self):
         """
