@@ -107,7 +107,7 @@ class ArmController:
         cmd_msg_.header = Header(stamp=rospy.Time.now(), frame_id="")
         # 左臂：11---17, 右臂：21---27
         cmd1 = SetMotorPosition(name=name_, pos=pos_, spd=spd_, cur=cur_)  # 名称  # 弧度  # RPM  # 安培
-        cmd_msg_.cmds = [cmd1]
+        cmd_msg_.cmds.append(cmd1)
         # 发布消息
         self.arm_cmd_pos_pub.publish(cmd_msg_)
 
@@ -137,8 +137,7 @@ class ArmController:
         :param joint_angles: 关节角度 (list, 弧度)
         """
         self.send_arm_cmd_pos(self.joint_names[is_left][joint_name], self.dual_joint_positions[is_left][joint_name] + rotate_angle, self.joint_speed, self.joint_current)
-        rotate_time = min(rotate_angle / self.joint_speed, self.tr_point_time)
-        rospy.sleep(rotate_time)
+        rospy.sleep(self.tr_point_time)
         rotate_error = abs(self.dual_joint_positions[is_left][joint_name] + rotate_angle - self.dual_joint_positions[is_left][joint_name])
         rotate_status = rotate_error < self.joint_tolerance
         if rotate_status:
@@ -147,7 +146,7 @@ class ArmController:
             rospy.logerr("Rotate Joint %s %s: %s" % (self.joint_names[is_left][joint_name], rotate_angle, rotate_status))
         return rotate_status
 
-    def set_end_effector_target(self, is_left: bool, target_pos: list, target_ori: list, use_matrix=False):
+    def set_end_effector_target(self, is_left: bool, target_pos: np.ndarray, target_ori: np.ndarray, use_matrix=False):
         # 生成轨迹(2厘米生成一个点, 减少数量以加快计算)
         start_pos, start_rot, start_quat = self.arm_kinematics[is_left].forward_kinematics(self.dual_joint_positions[is_left])
         positions = self.arm_kinematics[is_left].generate_trajectory_by_dist(start_pos, target_pos, self.tr_distance)
@@ -242,12 +241,12 @@ class ArmController:
 
             rospy.sleep(self.tr_point_time)
 
-        left_plan_error_ = np.linalg.norm(np.array(left_target_pos) - np.array(traj_left_positions_[-1]))  # 左臂规划误差
+        # left_plan_error_ = np.linalg.norm(np.array(left_target_pos) - np.array(traj_left_positions_[-1]))  # 左臂规划误差
         left_true_error2_ = np.linalg.norm(np.array(left_target_pos) - np.array(self.left_end_effector_pose))  # 左臂实际末端位置误差
-        right_plan_error_ = np.linalg.norm(np.array(right_target_pos) - np.array(traj_right_positions_[-1]))  # 右臂规划误差
+        # right_plan_error_ = np.linalg.norm(np.array(right_target_pos) - np.array(traj_right_positions_[-1]))  # 右臂规划误差
         right_true_error2_ = np.linalg.norm(np.array(right_target_pos) - np.array(self.right_end_effector_pose))  # 右臂实际末端位置误差
         left_arm_move_status, right_arm_move_status = left_true_error2_ < self.joint_tolerance, right_true_error2_ < self.joint_tolerance
-        # rospy.loginfo("Arm Move Success") if left_arm_move_status and right_arm_move_status else rospy.loginfo("Arm Move Failed")
+        rospy.loginfo("Arm Move Success") if left_arm_move_status and right_arm_move_status else rospy.loginfo("Arm Move Failed")
 
         return left_true_error2_ < self.joint_tolerance, right_true_error2_ < self.joint_tolerance
 
@@ -416,10 +415,12 @@ class ArmController:
         rospy.loginfo("Arm Controller Initializing...")
         all_joint_names = self.joint_names[True] + self.joint_names[False]
         all_positions = [0.0] * 14  # 初始化所有关节位置为0
+        # all_positions[3] = -1.57
+        # all_positions[10] = -1.57
         speeds = [self.joint_speed] * 14
         currents = [self.joint_current] * 14
         self.send_arms_cmd_pos(all_joint_names, all_positions, speeds, currents)
-        rospy.sleep(1.0)
+        rospy.sleep(2.0)
         dual_joint_error_ = np.linalg.norm(np.array(self.left_joint_positions + self.right_joint_positions) - np.array(all_positions))
         rospy.loginfo(f"Arm Initialization Status: {dual_joint_error_ < self.joint_tolerance}, dual joint error: {dual_joint_error_:.4f}")
         return dual_joint_error_ < self.joint_tolerance

@@ -18,8 +18,8 @@ class InspireController:
         self.right_hand_controller = InspireHandController(is_left=False)
         self.hand_controller = [self.right_hand_controller, self.left_hand_controller]
         self.angle_tolerance = 0.01  # 角度容忍度
-        self.left_init_position = [1.0, 1.0, 1.0, 1.0, 1.0, 0.0]
-        self.right_init_position = [1.0, 1.0, 1.0, 1.0, 1.0, 0.0]
+        self.left_init_position = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+        self.right_init_position = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
         # self.init_hand_status()
         rospy.sleep(0.1)
     
@@ -49,7 +49,7 @@ class InspireController:
         :return: 是否成功
         """
         # 打印调试信息
-        grip_single_hand_status = self.move_single_hand(is_left, [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        grip_single_hand_status = self.move_single_hand(is_left, [0.0, 0.0, 0.0, 0.0, 0.0, 1.0])
         rospy.loginfo("Single hand moved successfully") if grip_single_hand_status else rospy.logerr("Single hand moved failed")
         return grip_single_hand_status
     
@@ -59,7 +59,7 @@ class InspireController:
         :return: 是否成功
         """
         # 打印调试信息
-        grip_left_hands_status, grip_right_hands_status = self.move_both_hands([0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        grip_left_hands_status, grip_right_hands_status = self.move_both_hands([0.1, 0.1, 0.1, 0.1, 0.5, 0.5], [0.1, 0.1, 0.1, 0.1, 0.5, 0.5])
         rospy.loginfo("Both hands grip successfully") if grip_left_hands_status and grip_right_hands_status else rospy.logerr("Both hands grip failed")
         return grip_left_hands_status and grip_right_hands_status
     
@@ -92,7 +92,7 @@ class InspireController:
         left_success = self.left_hand_controller.set_angles(self.left_init_position)
         right_success = self.right_hand_controller.set_angles(self.right_init_position)
         rospy.loginfo("Inspire Hand Controller Initializing...")
-        rospy.sleep(1)
+        rospy.sleep(2)
         if self.left_hand_controller.position is None or self.right_hand_controller.position is None:
             rospy.logerr("Hand position not initialized properly")
             return False

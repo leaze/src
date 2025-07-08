@@ -1,7 +1,8 @@
 import numpy as np
 from scipy.optimize import minimize
 import math
-import transforms3d as tf3d
+# import transforms3d as tf3d
+from scipy.spatial.transform import Rotation
 
 
 class ArmKinematics:
@@ -48,6 +49,11 @@ class ArmKinematics:
             (-1.3, 1.65),  # wrist_pitch
             (-1.04, 0.785),  # wrist_roll
         ]
+
+    def mat2quat_tf(self, matrix):
+        # 保持与 transforms3d 相同的 [w, x, y, z] 格式：
+        quat = Rotation.from_matrix(matrix).as_quat()
+        return [quat[3], quat[0], quat[1], quat[2]]
 
     def interpolate_position(self, start_pos, end_pos, num_points):
         """线性插值位置"""
@@ -141,7 +147,8 @@ class ArmKinematics:
         # 将旋转矩阵转换为四元数
         try:
             # 使用transforms3d如果可用
-            quaternion = tf3d.quaternions.mat2quat(rotation_matrix)
+            # quaternion = tf3d.quaternions.mat2quat(rotation_matrix)
+            quaternion = self.mat2quat_tf(rotation_matrix)
         except AttributeError:
             # 备选方案：手动计算四元数
             tr = rotation_matrix[0, 0] + rotation_matrix[1, 1] + rotation_matrix[2, 2]

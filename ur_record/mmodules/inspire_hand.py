@@ -33,10 +33,10 @@ class InspireHandController:
         )
         
         # 初始化服务代理（等待服务就绪）
-        # rospy.wait_for_service(f"{self.hand}/set_angle")
+        # rospy.wait_for_service(f"/inspire_hand/set_angle/{self.hand}_hand")
 
         # 角度设置服务代理
-        self.set_angle_service = rospy.ServiceProxy(f"/inspire_hand/set_angle/{self.hand}",set_angle)
+        self.set_angle_service = rospy.ServiceProxy(f"/inspire_hand/set_angle/{self.hand}_hand",set_angle)
         rospy.sleep(0.1)
     def state_callback(self, msg:JointState):
         """处理关节状态更新"""
@@ -86,7 +86,7 @@ class InspireHandController:
             req.angle5Ratio = angles[5]  # 拇指旋转
             
             resp = self.set_angle_service(req)
-            rospy.loginfo(f"Angle set{'suceess' if resp.angle_accepted else 'failed'}")
+            rospy.loginfo(f"Angle set {'suceess' if resp.angle_accepted else 'failed'}")
             return resp.angle_accepted
         except rospy.ServiceException as e:
             rospy.logerr(f"Angle set service call failed: {e}")
