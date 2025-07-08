@@ -68,6 +68,7 @@ add_service_files(
   FILES
   set_angle.srv
   set_clear_error.srv
+  ExecuteArmCommand.srv
 )
 
 ## Generate actions in the 'action' folder

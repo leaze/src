@@ -18,8 +18,8 @@ class InspireController:
         self.right_hand_controller = InspireHandController(is_left=False)
         self.hand_controller = [self.right_hand_controller, self.left_hand_controller]
         self.angle_tolerance = 0.01  # 角度容忍度
-        self.left_init_position = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
-        self.right_init_position = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+        self.left_init_position = [1.0, 1.0, 1.0, 1.0, 1.0, 0.01]
+        self.right_init_position = [1.0, 1.0, 1.0, 1.0, 1.0, 0.01]
         # self.init_hand_status()
         rospy.sleep(0.1)
     

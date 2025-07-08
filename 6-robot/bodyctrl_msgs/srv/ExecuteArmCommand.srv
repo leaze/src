@@ -1,0 +1,9 @@
+# 请求参数
+int32[] joint_names
+float64[] target_positions
+float64[] speeds
+float64[] currents
+---
+# 响应
+bool success
+string message
