@@ -9,7 +9,7 @@
 @Site    :   https://star-cheng.github.io/Blog/
 """
 from bodyctrl_msgs.msg import CmdSetMotorPosition, SetMotorPosition, MotorStatusMsg, MotorStatus
-from bodyctrl_msgs.srv import ExecuteArmCommand, ExecuteArmCommandRequest, ExecuteArmCommandResponse
+from bodyctrl_msgs.srv import SendArmsCmd, SendArmsCmdResponse, SendArmsCmdRequest
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from geometry_msgs.msg import PoseStamped, PoseArray, Twist
 from controllers.dual_arm_solver import ArmKinematics
@@ -18,8 +18,10 @@ from sensor_msgs.msg import JointState
 from std_msgs.msg import Header
 from typing import List
 import numpy as np
+import threading
 import rospy
 import math
+import time
 
 
 class ArmController:
@@ -30,22 +32,26 @@ class ArmController:
         self.arm_kinematics = [self.arm_right_kinematics, self.arm_left_kinematics]
 
         # 控制器参数
-        self.joint_speed = rospy.get_param("~joint_speed", 60)  # rpm
-        self.joint_current = rospy.get_param("~joint_current", 10.0)  # A
+        self.joint_speed = rospy.get_param("~joint_speed", 1)  # rpm
+        self.joint_current = rospy.get_param("~joint_current", 5.0)  # A
         self.joint_tolerance = rospy.get_param("~joint_tolerance", 0.01)  # rad
         self.tr_distance = rospy.get_param("~tr_distance", 0.02)  # m
         self.tr_point_time = rospy.get_param("~tr_point_time", min(0.2, 2 * math.pi / self.joint_speed))  # s
+        
+        # 线程同步工具
+        self.lock = threading.Lock()
+        self.condition = threading.Condition(self.lock)
+        self.target_dict = {}  # 存储当前目标位置 {joint_name: target_position}
+
+        
         # 关节状态变量
-        self.left_joint_status = {}
+        self.left_joint_status = {"name": [], "pos": [], "speed": [], "current": [], "temp": [], "error": []}
         self.left_joint_positions = [0.0, 0.0, 0.0, -0.0, 0.0, 0.0, 0.0]
         self.right_joint_positions = [0.0, -0.0, 0.0, -0.0, 0.0, 0.0, 0.0]
         self.dual_joint_positions = [self.right_joint_positions, self.left_joint_positions]
-        self.left_end_effector_pose, self.right_end_effector_rota, self.left_end_effector_quat = self.arm_left_kinematics.forward_kinematics(
-            self.left_joint_positions
-        )
-        self.right_end_effector_pose, self.right_end_effector_rota, self.right_end_effector_quat = self.arm_right_kinematics.forward_kinematics(
-            self.right_joint_positions
-        )
+
+        # 初始化末端执行器位姿
+        self.update_end_effector_poses()
         self.joint_names = {True: [i for i in range(11, 18)], False: [j for j in range(21, 28)]}
 
         # 轨迹规划参数
@@ -55,14 +61,7 @@ class ArmController:
         self.right_target_pose = None
         self.use_coordinated_motion = False
 
-        # 命令执行状态
-        self.command_in_progress = False
-        self.command_completed = False
-        self.command_success = False
-        self.last_command_target = None  # 存储最后的目标位置
-        self.last_command_names = None   # 存储最后发送的关节名称
-
-        # # 设置订阅者
+        # 设置订阅者
         rospy.Subscriber("/arm/status", MotorStatusMsg, self.arm_status_callback)
         # rospy.Subscriber('/joint_states', JointState, self.joint_states_callback)
         # rospy.Subscriber('/right_arm/target_pose', PoseStamped, self.right_target_callback)
@@ -73,130 +72,71 @@ class ArmController:
         self.right_tra_pub = rospy.Publisher("/right_arm/joint_trajectory", JointTrajectory, queue_size=1)
         self.arm_cmd_pos_pub = rospy.Publisher("/arm/cmd_pos", CmdSetMotorPosition, queue_size=10)
 
-        # 添加服务
-        self.execute_command_service = rospy.Service(
-            '/arm/execute_command', 
-            ExecuteArmCommand, 
-            self.handle_execute_command
-        )
-
         # 初始化关节状态
         # self.init_arm_status()
         rospy.sleep(0.1)
 
+    def update_end_effector_poses(self):
+        """更新末端执行器位姿"""
+        with self.lock:
+            (self.left_end_effector_pose, 
+             self.left_end_effector_rota, 
+             self.left_end_effector_quat) = self.arm_left_kinematics.forward_kinematics(self.left_joint_positions)
+            
+            (self.right_end_effector_pose, 
+             self.right_end_effector_rota, 
+             self.right_end_effector_quat) = self.arm_right_kinematics.forward_kinematics(self.right_joint_positions)
+
     def arm_status_callback(self, arm_status_msg: MotorStatusMsg):
-        name_ls_, pos_ls_, speed_ls_, current_ls_, temperature_ls_, error_ls_, dual_joint_positions_ls_ = [], [], [], [], [], [], [0.0] * 14
+        """关节状态回调函数，更新关节状态并检查是否到达目标位置"""
+        name_ls_ = []
+        pos_ls_ = []
+        speed_ls_ = []
+        current_ls_ = []
+        temperature_ls_ = []
+        error_ls_ = []
+        
         for arm_idx_ in range(14):
-            name_ls_.append(arm_status_msg.status[arm_idx_].name)
-            pos_ls_.append(arm_status_msg.status[arm_idx_].pos)
-            speed_ls_.append(arm_status_msg.status[arm_idx_].speed)
-            current_ls_.append(arm_status_msg.status[arm_idx_].current)
-            temperature_ls_.append(arm_status_msg.status[arm_idx_].temperature)
-            error_ls_.append(arm_status_msg.status[arm_idx_].error)
-            dual_joint_positions_ls_[arm_idx_] = arm_status_msg.status[arm_idx_].pos
-        self.left_joint_positions = dual_joint_positions_ls_[0:7]
-        self.right_joint_positions = dual_joint_positions_ls_[7:14]
-        self.left_end_effector_pose, self.left_end_effector_rota, self.left_end_effector_quat = self.arm_left_kinematics.forward_kinematics(
-            self.left_joint_positions
-        )
-        self.right_end_effector_pose, self.right_end_effector_rota, self.right_end_effector_quat = self.arm_right_kinematics.forward_kinematics(
-            self.right_joint_positions
-        )
-        self.dual_joint_positions = [self.right_joint_positions, self.left_joint_positions]
-        self.left_joint_status["name"] = name_ls_
-        self.left_joint_status["pos"] = pos_ls_
-        self.left_joint_status["speed"] = speed_ls_
-        self.left_joint_status["current"] = current_ls_
-        self.left_joint_status["temp"] = temperature_ls_
-        self.left_joint_status["error"] = error_ls_
+            status = arm_status_msg.status[arm_idx_]
+            name_ls_.append(status.name)
+            pos_ls_.append(status.pos)
+            speed_ls_.append(status.speed)
+            current_ls_.append(status.current)
+            temperature_ls_.append(status.temperature)
+            error_ls_.append(status.error)
         
-        # 检查命令是否完成
-        if self.command_in_progress and not self.command_completed:
-            self.check_command_completion()
-
-    def handle_execute_command(self, req: ExecuteArmCommandRequest) -> ExecuteArmCommandResponse:
-        """处理执行命令的服务请求"""
-        rospy.loginfo("Received execute command request")
-        
-        if self.command_in_progress:
-            rospy.logwarn("Command already in progress, rejecting new request")
-            return ExecuteArmCommandResponse(success=False, message="Command already in progress")
+        # 更新关节状态（线程安全）
+        with self.lock:
+            self.left_joint_positions = pos_ls_[0:7]
+            self.right_joint_positions = pos_ls_[7:14]
+            self.dual_joint_positions = [self.right_joint_positions, self.left_joint_positions]
+            self.left_joint_status["name"] = name_ls_
+            self.left_joint_status["pos"] = pos_ls_
+            self.left_joint_status["speed"] = speed_ls_
+            self.left_joint_status["current"] = current_ls_
+            self.left_joint_status["temp"] = temperature_ls_
+            self.left_joint_status["error"] = error_ls_
             
-        # 重置状态
-        self.command_in_progress = True
-        self.command_completed = False
-        self.command_success = False
-        
-        # 存储目标位置用于验证
-        self.last_command_target = req.target_positions
-        self.last_command_names = req.joint_names
-        
-        # 发送命令
-        self.send_arms_cmd_pos(req.joint_names, req.target_positions, req.speeds, req.currents)
-        
-        rospy.loginfo(f"Command sent for joints: {req.joint_names}")
-        rospy.loginfo(f"Target positions: {req.target_positions}")
-        
-        # 等待命令完成
-        timeout = rospy.Duration(10.0)  # 10秒超时
-        start_time = rospy.Time.now()
-        
-        while not rospy.is_shutdown() and not self.command_completed:
-            # 检查超时
-            if (rospy.Time.now() - start_time) > timeout:
-                rospy.logwarn("Command execution timed out")
-                break
+            # 检查是否达到目标位置
+            if self.target_dict:
+                all_reached = True
+                for name, target_pos in self.target_dict.items():
+                    if name in name_ls_:
+                        idx = name_ls_.index(name)
+                        current_pos = pos_ls_[idx]
+                        if abs(current_pos - target_pos) > self.joint_tolerance:
+                            all_reached = False
+                            break
+                    else:
+                        all_reached = False
+                        break
                 
-            rospy.sleep(0.1)  # 避免过度占用CPU
-            
-        # 准备响应
-        resp = ExecuteArmCommandResponse()
-        resp.success = self.command_success
-        if self.command_success:
-            resp.message = "Command completed successfully"
-            rospy.loginfo("Command completed successfully")
-        else:
-            resp.message = "Command failed or timed out"
-            rospy.logwarn("Command failed or timed out")
+                if all_reached:
+                    # 通知等待线程
+                    self.condition.notify_all()
         
-        # 重置状态
-        self.command_in_progress = False
-        return resp
-
-    def check_command_completion(self):
-        """检查当前关节位置是否达到目标位置"""
-        if not self.last_command_target or not self.last_command_names:
-            return
-            
-        # 获取当前所有关节位置
-        current_positions = self.right_joint_positions + self.left_joint_positions
-        
-        # 创建索引映射：关节名称 -> 位置索引
-        joint_index_map = {}
-        for idx, name in enumerate(self.left_joint_status["name"]):
-            joint_index_map[name] = idx
-        
-        # 检查所有关节是否在容差范围内
-        all_within_tolerance = True
-        for i, joint_name in enumerate(self.last_command_names):
-            if joint_name not in joint_index_map:
-                rospy.logwarn(f"Joint {joint_name} not found in current status")
-                all_within_tolerance = False
-                break
-                
-            current_pos = self.left_joint_status["pos"][joint_index_map[joint_name]]
-            target_pos = self.last_command_target[i]
-            error = abs(current_pos - target_pos)
-            
-            if error > self.joint_tolerance:
-                all_within_tolerance = False
-                # rospy.logdebug(f"Joint {joint_name} not reached: current={current_pos:.4f}, target={target_pos:.4f}, error={error:.4f}")
-                break
-                
-        if all_within_tolerance:
-            self.command_completed = True
-            self.command_success = True
-            rospy.loginfo("All joints reached target positions")
+        # 更新末端执行器位姿
+        self.update_end_effector_poses()
 
     def send_arm_cmd_pos(self, name_: int, pos_: float, spd_: float, cur_: float):
         """发送单个关节的目标位置命令
@@ -233,35 +173,67 @@ class ArmController:
             cmd_msgs_.cmds.append(cmd)
         self.arm_cmd_pos_pub.publish(cmd_msgs_)
 
+    def send_arms_cmd_pos_service(self, name_ls: List[int], pos_ls: List[float], 
+                                 spd_ls: List[float], cur_ls: List[float]) -> bool:
+        """
+        服务版本的多关节控制命令
+        - 发送命令后等待关节到达目标位置(或超时5秒)
+        - 返回是否成功到达
+        """
+        # 发送命令
+        self.send_arms_cmd_pos(name_ls, pos_ls, spd_ls, cur_ls)
+        
+        # 设置目标字典
+        with self.lock:
+            self.target_dict = dict(zip(name_ls, pos_ls))
+        
+        # 等待结果或超时
+        start_time = time.time()
+        timeout = 5.0  # 5秒超时
+        success = False
+        
+        with self.condition:
+            while not success and (time.time() - start_time) < timeout:
+                # 检查是否所有关节都到达目标
+                all_reached = True
+                for name, target_pos in self.target_dict.items():
+                    if name in self.left_joint_status["name"]:
+                        idx = self.left_joint_status["name"].index(name)
+                        current_pos = self.left_joint_status["pos"][idx]
+                        if abs(current_pos - target_pos) > self.joint_tolerance:
+                            all_reached = False
+                            break
+                    else:
+                        all_reached = False
+                        break
+                
+                if all_reached:
+                    success = True
+                    break
+                
+                # 等待状态更新通知
+                remaining_time = timeout - (time.time() - start_time)
+                if remaining_time > 0:
+                    self.condition.wait(remaining_time)
+        
+        # 清除目标字典
+        with self.lock:
+            self.target_dict = {}
+        
+        return success
+
     def rotate_single_joint(self, is_left: bool, joint_name: int, rotate_angle: float):
         """旋转关节
         :param is_left: 是否为左臂 (bool)
         :param joint_name: 关节名称 (int), 这里填0-6即可, 分别对于7个关节
         :param joint_angles: 关节角度 (list, 弧度)
         """
-        # 创建服务请求
-        joint_id = self.joint_names[is_left][joint_name]
         target_pos = self.dual_joint_positions[is_left][joint_name] + rotate_angle
-        
-        req = ExecuteArmCommandRequest()
-        req.joint_names = [joint_id]
-        req.target_positions = [target_pos]
-        req.speeds = [self.joint_speed]
-        req.currents = [self.joint_current]
-        
-        try:
-            execute_service = rospy.ServiceProxy('/arm/execute_command', ExecuteArmCommand)
-            resp = execute_service(req)
-            
-            if resp.success:
-                rospy.loginfo(f"Rotated Joint {joint_id} by {rotate_angle:.2f} rad successfully")
-                return True
-            else:
-                rospy.logwarn(f"Failed to rotate Joint {joint_id}: {resp.message}")
-                return False
-        except rospy.ServiceException as e:
-            rospy.logerr(f"Service call failed: {e}")
-            return False
+        name = self.joint_names[is_left][joint_name]
+        # 使用服务接口发送命令并等待
+        success = self.send_arms_cmd_pos_service([name], [target_pos], [self.joint_speed], [self.joint_current])
+        rospy.loginfo(f"Rotate Joint {name} by {rotate_angle:.4f} rad: Success") if success else rospy.logerr(f"Rotate Joint {name} by {rotate_angle:.4f} rad: Failed (timeout)")
+        return success
 
     def set_end_effector_target(self, is_left: bool, target_pos: np.ndarray, target_ori: np.ndarray, use_matrix=False):
         # 生成轨迹(2厘米生成一个点, 减少数量以加快计算)
@@ -287,6 +259,7 @@ class ArmController:
                 use_rotation_matrix=use_matrix,
             )
             joint_trajectory.append(joint_angles_)
+            prev_joints = joint_angles_
             # 正向运动学验证
             calc_pos_, calc_rot, calc_quat_ = self.arm_kinematics[is_left].forward_kinematics(joint_angles_)
             all_positions.append(calc_pos_)
@@ -296,102 +269,24 @@ class ArmController:
             # print("Joint Angles (deg):", np.rad2deg(joint_angles_).round(2))
         return joint_trajectory, all_positions
 
-    def move_single_arm(self, is_left, target_pos, target_quat):
-        trajectory_, all_points_ = self.set_end_effector_target(is_left, target_pos, target_quat)
-        
-        # 创建服务请求
-        req = ExecuteArmCommandRequest()
-        req.joint_names = self.joint_names[is_left]
-        req.target_positions = trajectory_[-1]  # 使用轨迹的最后一个点作为目标位置
-        req.speeds = [self.joint_speed] * 7
-        req.currents = [self.joint_current] * 7
-        
-        try:
-            execute_service = rospy.ServiceProxy('/arm/execute_command', ExecuteArmCommand)
-            resp = execute_service(req)
-            
-            if not resp.success:
-                rospy.logerr(f"Single arm movement failed: {resp.message}")
-                return False
-        except rospy.ServiceException as e:
-            rospy.logerr(f"Service call failed: {e}")
-            return False
-        
-        # 正向运动学验证末端位置
-        calc_pos, calc_rot, calc_quat = self.arm_kinematics[is_left].forward_kinematics(self.dual_joint_positions[is_left])
-        position_error = np.linalg.norm(target_pos - calc_pos)
-        if position_error > self.joint_tolerance:
-            rospy.logwarn(f"End effector position error: {position_error:.4f} m")
-            return False
-        return True
+    def move_single_arm(self, is_left: bool, target_pos: np.ndarray, target_quat: np.ndarray):
+        left_target_joint_ = self.arm_kinematics[is_left].inverse_kinematics(target_pos, target_quat, self.dual_joint_positions[is_left])
+        self.send_arms_cmd_pos(self.joint_names[is_left], left_target_joint_, [self.joint_speed] * 7, [self.joint_current] * 7)
+        rospy.sleep(2.0)
+        joint_error_ = np.linalg.norm(np.array(self.dual_joint_positions[is_left]) - np.array(joint_error_))
+        rospy.loginfo(f"Arm Initialization Status: {joint_error_ < self.joint_tolerance}, dual joint error: {joint_error_:.4f}")
+        return joint_error_ < self.joint_tolerance
 
     def move_dual_arm(self, left_target_pos, left_target_quat, right_target_pos, right_target_quat):
-        # 分别计算左右臂的轨迹
-        traj_left_joints_, traj_left_positions_ = self.set_end_effector_target(True, left_target_pos, left_target_quat)
-        traj_right_joints_, traj_right_positions_ = self.set_end_effector_target(False, right_target_pos, right_target_quat)
-        n_left = len(traj_left_joints_)
-        n_right = len(traj_right_joints_)
-        n_points = max(n_left, n_right)
-
-        # 轨迹插值同步
-        if n_left != n_right:
-            # 时间归一化处理
-            orig_index_left = np.linspace(0, 1, n_left)
-            orig_index_right = np.linspace(0, 1, n_right)
-            new_index = np.linspace(0, 1, n_points)
-
-            # 插值处理
-            synced_left = []
-            for joint_idx in range(7):
-                joint_values = [point[joint_idx] for point in traj_left_joints_]
-                synced_values = np.interp(new_index, orig_index_left, joint_values)
-                synced_left.append(synced_values)
-            traj_left_joints_ = np.array(synced_left).T
-
-            synced_right = []
-            for joint_idx in range(7):
-                joint_values = [point[joint_idx] for point in traj_right_joints_]
-                synced_values = np.interp(new_index, orig_index_right, joint_values)
-                synced_right.append(synced_values)
-            traj_right_joints_ = np.array(synced_right).T
-
-        # 使用服务调用执行同步移动
-        for i in range(n_points):
-            # 创建服务请求
-            req = ExecuteArmCommandRequest()
-            req.joint_names = self.joint_names[True] + self.joint_names[False]
-            req.target_positions = traj_right_joints_[i].tolist() + traj_left_joints_[i].tolist()
-            # 设置速度(根据位置差自适应调整)
-            left_delta = np.linalg.norm(np.array(self.left_joint_positions) - np.array(traj_left_joints_[i]))
-            right_delta = np.linalg.norm(np.array(self.right_joint_positions) - np.array(traj_right_joints_[i]))
-            avg_speed = self.joint_speed + (left_delta + right_delta) * 0.5
-
-            speeds = [min(self.joint_speed, max(0.1, avg_speed))] * 14
-            currents = [self.joint_current] * 14
-            req.speeds = speeds
-            req.currents = currents
-            try:
-                execute_service = rospy.ServiceProxy('/arm/execute_command', ExecuteArmCommand)
-                resp = execute_service(req)
-                
-                if not resp.success:
-                    rospy.logerr(f"Trajectory point {i+1}/{n_points} failed: {resp.message}")
-                    return False, False
-            except rospy.ServiceException as e:
-                rospy.logerr(f"Service call failed: {e}")
-                return False, False
-
-        # 验证最终位置
+        left_target_joint_ = self.arm_kinematics[True].inverse_kinematics(left_target_pos, left_target_quat, self.dual_joint_positions[True])
+        right_target_joint_ = self.arm_kinematics[False].inverse_kinematics(right_target_pos, right_target_quat, self.dual_joint_positions[False])
+        self.send_arms_cmd_pos(self.joint_names[True] + self.joint_names[False], list(left_target_joint_) + list(right_target_joint_), [self.joint_speed] * 14, [self.joint_current] * 14)
+        rospy.sleep(2.0)
         left_true_error2_ = np.linalg.norm(np.array(left_target_pos) - np.array(self.left_end_effector_pose))  # 左臂实际末端位置误差
         right_true_error2_ = np.linalg.norm(np.array(right_target_pos) - np.array(self.right_end_effector_pose))  # 右臂实际末端位置误差
         left_arm_move_status, right_arm_move_status = left_true_error2_ < self.joint_tolerance, right_true_error2_ < self.joint_tolerance
-        
-        if left_arm_move_status and right_arm_move_status:
-            rospy.loginfo("Arm Move Success")
-        else:
-            rospy.logwarn(f"Arm Move Failed: left error={left_true_error2_:.4f}, right error={right_true_error2_:.4f}")
-
-        return left_arm_move_status, right_arm_move_status
+        rospy.loginfo("Arm Move Success") if left_arm_move_status and right_arm_move_status else rospy.loginfo("Arm Move Failed")
+        return left_true_error2_ < self.joint_tolerance, right_true_error2_ < self.joint_tolerance
 
     def move_single_forward(self, is_left: bool, distance: float) -> bool:
         """移动单只臂"""
@@ -441,7 +336,7 @@ class ArmController:
         rospy.loginfo("Move Single Arm Right Success") if move_right_single_success else rospy.loginfo("Move Single Arm Right Failed")
         return move_right_single_success
 
-    def move_forward(self, distance: float):
+    def move_dual_forward(self, distance: float):
         """前进指定距离"""
         left_start_pos_, left_start_rot_, left_start_quat_ = self.arm_kinematics[True].forward_kinematics(self.left_joint_positions)
         right_start_pos_, right_start_rot_, right_start_quat_ = self.arm_kinematics[False].forward_kinematics(self.right_joint_positions)
@@ -457,8 +352,7 @@ class ArmController:
         rospy.loginfo("Moved forward successfully") if move_forward_left_success and move_forward_right_success else rospy.logerr("Failed to move forward")
         return move_forward_left_success and move_forward_right_success
 
-
-    def move_backward(self, distance: float) -> bool:
+    def move_dual_backward(self, distance: float) -> bool:
         """后退指定距离"""
         left_start_pos_, left_start_rot_, left_start_quat_ = self.arm_kinematics[True].forward_kinematics(self.left_joint_positions)
         right_start_pos_, right_start_rot_, right_start_quat_ = self.arm_kinematics[False].forward_kinematics(self.right_joint_positions)
@@ -474,7 +368,7 @@ class ArmController:
         rospy.loginfo("Moved backward successfully") if move_backward_left_success and move_backward_right_success else rospy.logerr("Moved backward Failed")
         return move_backward_left_success and move_backward_right_success
 
-    def move_up(self, distance: float) -> bool:
+    def move_dual_up(self, distance: float) -> bool:
         """向上移动指定距离"""
         left_start_pos_, left_start_rot_, left_start_quat_ = self.arm_kinematics[True].forward_kinematics(self.left_joint_positions)
         right_start_pos_, right_start_rot_, right_start_quat_ = self.arm_kinematics[False].forward_kinematics(self.right_joint_positions)
@@ -490,7 +384,7 @@ class ArmController:
         # 打印调试信息
         return move_up_left_success and move_up_right_success
 
-    def move_down(self, distance: float) -> bool:
+    def move_dual_down(self, distance: float) -> bool:
         """向下移动指定距离"""
         left_start_pos_, left_start_rot_, left_start_quat_ = self.arm_kinematics[True].forward_kinematics(self.left_joint_positions)
         right_start_pos_, right_start_rot_, right_start_quat_ = self.arm_kinematics[False].forward_kinematics(self.right_joint_positions)
@@ -506,7 +400,7 @@ class ArmController:
         rospy.loginfo("Moved down successfully") if move_down_left_success and move_down_right_success else rospy.logerr("Moved down Failed")
         return move_down_left_success and move_down_right_success
 
-    def move_left(self, distance: float):
+    def move_dual_left(self, distance: float):
         """向左移动指定距离"""
         left_start_pos_, left_start_rot_, left_start_quat_ = self.arm_kinematics[True].forward_kinematics(self.left_joint_positions)
         right_start_pos_, right_start_rot_, right_start_quat_ = self.arm_kinematics[False].forward_kinematics(self.right_joint_positions)
@@ -521,7 +415,7 @@ class ArmController:
         rospy.loginfo("Moved left successfully") if move_left_success and move_right_success else rospy.logerr("Moved left Failed")
         return move_left_success and move_right_success
 
-    def move_right(self, distance: float):
+    def move_dual_right(self, distance: float):
         """向右移动指定距离"""
         left_start_pos_, left_start_rot_, left_start_quat_ = self.arm_kinematics[True].forward_kinematics(self.left_joint_positions)
         right_start_pos_, right_start_rot_, right_start_quat_ = self.arm_kinematics[False].forward_kinematics(self.right_joint_positions)
@@ -536,20 +430,20 @@ class ArmController:
         rospy.loginfo("Moved right successfully") if move_right_success and move_left_success else rospy.logerr("Moved right Failed")
         return move_right_success and move_left_success
 
-    def moves(self, distance: float, direction: str):
+    def move_dual(self, distance: float, direction: str):
         """根据方向移动指定距离"""
         if direction == "forward":
-            return self.move_forward(distance)
+            return self.move_dual_forward(distance)
         elif direction == "backward":
-            return self.move_backward(distance)
+            return self.move_dual_backward(distance)
         elif direction == "up":
-            return self.move_up(distance)
+            return self.move_dual_up(distance)
         elif direction == "down":
-            return self.move_down(distance)
+            return self.move_dual_down(distance)
         elif direction == "left":
-            return self.move_left(distance)
+            return self.move_dual_left(distance)
         elif direction == "right":
-            return self.move_right(distance)
+            return self.move_dual_right(distance)
         else:
             rospy.logerr(f"Invalid direction: {direction}. Use 'forward', 'backward', 'up', or 'down'.")
             return False
@@ -558,26 +452,27 @@ class ArmController:
         rospy.loginfo("Arm Controller Initializing...")
         all_joint_names = self.joint_names[True] + self.joint_names[False]
         all_positions = [0.0] * 14  # 初始化所有关节位置为0
+        all_positions[1] = 0.15
+        all_positions[8] = -0.15
         # all_positions[3] = -1.57
         # all_positions[10] = -1.57
         speeds = [self.joint_speed] * 14
         currents = [self.joint_current] * 14
-        self.send_arms_cmd_pos(all_joint_names, all_positions, speeds, currents)
-        rospy.sleep(2.0)
+        # # 不使用服务接口发送初始化命令
+        # self.send_arms_cmd_pos(all_joint_names, all_positions, speeds, currents)
+        # rospy.sleep(2.0)
+        # 使用服务接口发送初始化命令
+        self.send_arms_cmd_pos_service(all_joint_names, all_positions, speeds, currents)
         dual_joint_error_ = np.linalg.norm(np.array(self.left_joint_positions + self.right_joint_positions) - np.array(all_positions))
         rospy.loginfo(f"Arm Initialization Status: {dual_joint_error_ < self.joint_tolerance}, dual joint error: {dual_joint_error_:.4f}")
         return dual_joint_error_ < self.joint_tolerance
 
     def control_loop(self):
-        left_target_pos_ = [0.28298403, 0.24302717, 0.06437022]
-        left_target_quat_ = [0.706715, 0.03085568, -0.70615245, -0.03083112]
-        right_target_pos_ = [0.28298403, -0.18722009, 0.05216848]
-        right_target_quat_ = [0.706715, 0.03085568, -0.70615245, -0.03083112]
-        success_left, success_right = self.move_dual_arm(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
-        # self.move_single_arm(True, left_target_pos_, left_target_quat_)
-        # self.move_single_arm(False, right_target_pos_, right_target_quat_)
-        return success_left and success_right
-
+        left_position, right_position = [0.0, 0.15, 0.0, -1.0, 0.0, 0.0, -0.0], [0.0, -0.15, 0.0, -1.0, -0.0, 0.0, 0.0]
+        left_success = self.send_arms_cmd_pos_service(self.joint_names[True], left_position, [self.joint_speed] * 7, [self.joint_current] * 7)
+        right_success = self.send_arms_cmd_pos_service(self.joint_names[False], right_position, [self.joint_speed] * 7, [self.joint_current] * 7)
+        rospy.loginfo(f"Arm Send Service Status: {left_success and right_success}")
+    
     def run(self):
         """启动控制器"""
         try:
