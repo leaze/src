@@ -8,7 +8,7 @@
 @Version :   1.0
 @Site    :   https://star-cheng.github.io/Blog/
 """
-from controllers.arm_controller import ArmController
+from controllers.arm_controller_service import ArmController
 from mmodules.inspire_controller import InspireController
 from sensors.arm_6dof import Arm6Dof
 import numpy as np
@@ -133,18 +133,18 @@ class RobotController:
     def test(self):
         # 移动各个关节轴
         right_position = [0.0, -0.15, 0.0, -1.0, -0.0, 0.0, 0.0]
-        self.arm_controller.send_arms_cmd_pos(self.arm_controller.joint_names[False], right_position, [self.arm_controller.joint_speed] * 7, [self.arm_controller.joint_current] * 7)
-        rospy.sleep(2.0)
+        self.arm_controller.send_arms_cmd_pos_service(self.arm_controller.joint_names[False], right_position, [self.arm_controller.joint_speed] * 7, [self.arm_controller.joint_current] * 7)
+        # rospy.sleep(2.0)
         dual_joint_error_ = np.linalg.norm(np.array(self.arm_controller.right_joint_positions) - np.array(right_position))
         rospy.loginfo(f"Arm Location Step1 Status: {dual_joint_error_ < self.arm_controller.joint_tolerance}, dual joint error: {dual_joint_error_:.4f}")
         # 定位楔子
         right_target_pos_ = [0.32458236, -0.21052364, -0.07044139]
         right_target_quat_ = [0.615048141451942, 0.5939422367756204, -0.32283101752874543, -0.4058676350632553]
         right_start_pos_ = self.arm_controller.right_joint_positions
-        right_target_joint_ = self.arm_controller.arm_kinematics[False].inverse_kinematics(right_target_pos_, None, right_start_pos_)
+        right_target_joint_ = self.arm_controller.arm_kinematics[False].inverse_kinematics(right_target_pos_, right_target_quat_, right_start_pos_)
         rospy.loginfo("Location Wedge suceessed")
-        self.arm_controller.send_arms_cmd_pos(self.arm_controller.joint_names[False], list(right_target_joint_), [self.arm_controller.joint_speed] * 7, [self.arm_controller.joint_current] * 7)
-        rospy.sleep(2.0)
+        self.arm_controller.send_arms_cmd_pos_service(self.arm_controller.joint_names[False], list(right_target_joint_), [self.arm_controller.joint_speed] * 7, [self.arm_controller.joint_current] * 7)
+        # rospy.sleep(2.0)
         dual_joint_error_ = np.linalg.norm(np.array(self.arm_controller.right_joint_positions) - np.array(list(right_target_joint_)))
         rospy.loginfo(f"Arm Location Step1 Status: {dual_joint_error_ < self.arm_controller.joint_tolerance}, dual joint error: {dual_joint_error_:.4f}")
         # 抓取楔子
@@ -155,23 +155,21 @@ class RobotController:
         # 移动到指定位置1
         # right_target_pos_ = [0.32458236, -0.21052364, -0.07044139]
         right_target_pos_ = [0.15458236, 0.047202045, -0.00044139]
-        # right_target_quat_ = [0.615048141451942, 0.5939422367756204, -0.32283101752874543, -0.4058676350632553]
-        right_target_quat_ = None
+        right_target_quat_ = [0.615048141451942, 0.5939422367756204, -0.32283101752874543, -0.4058676350632553]
         right_start_pos_ = self.arm_controller.right_joint_positions
-        right_target_joint_ = self.arm_controller.arm_kinematics[False].inverse_kinematics(right_target_pos_, None, right_start_pos_)
+        right_target_joint_ = self.arm_controller.arm_kinematics[False].inverse_kinematics(right_target_pos_, right_target_quat_, right_start_pos_)
         rospy.loginfo("Move Step1 suceessed")
-        self.arm_controller.send_arms_cmd_pos(self.arm_controller.joint_names[False], list(right_target_joint_), [self.arm_controller.joint_speed] * 7, [self.arm_controller.joint_current] * 7)
-        rospy.sleep(2.0)
+        self.arm_controller.send_arms_cmd_pos_service(self.arm_controller.joint_names[False], list(right_target_joint_), [self.arm_controller.joint_speed] * 7, [self.arm_controller.joint_current] * 7)
+        # rospy.sleep(2.0)
         # 移动到指定位置2
         # right_target_pos_ = [0.32458236, -0.21052364, -0.07044139]
         right_target_pos_ = [0.25458236, 0.047202045, -0.00044139]
-        # right_target_quat_ = [0.615048141451942, 0.5939422367756204, -0.32283101752874543, -0.4058676350632553]
-        right_target_quat_ = None
+        right_target_quat_ = [0.615048141451942, 0.5939422367756204, -0.32283101752874543, -0.4058676350632553]
         right_start_pos_ = self.arm_controller.right_joint_positions
-        right_target_joint_ = self.arm_controller.arm_kinematics[False].inverse_kinematics(right_target_pos_, None, right_start_pos_)
+        right_target_joint_ = self.arm_controller.arm_kinematics[False].inverse_kinematics(right_target_pos_, right_target_quat_, right_start_pos_)
         rospy.loginfo("Move Step1 suceessed")
-        self.arm_controller.send_arms_cmd_pos(self.arm_controller.joint_names[False], list(right_target_joint_), [self.arm_controller.joint_speed] * 7, [self.arm_controller.joint_current] * 7)
-        rospy.sleep(2.0)
+        self.arm_controller.send_arms_cmd_pos_service(self.arm_controller.joint_names[False], list(right_target_joint_), [self.arm_controller.joint_speed] * 7, [self.arm_controller.joint_current] * 7)
+        # rospy.sleep(2.0)
     
     def test2(self):
         # 移动各个关节轴

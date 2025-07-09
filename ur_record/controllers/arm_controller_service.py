@@ -9,7 +9,7 @@
 @Site    :   https://star-cheng.github.io/Blog/
 """
 from bodyctrl_msgs.msg import CmdSetMotorPosition, SetMotorPosition, MotorStatusMsg, MotorStatus
-from bodyctrl_msgs.srv import SendArmsCmd, SendArmsCmdResponse, SendArmsCmdRequest
+# from bodyctrl_msgs.srv import SendArmsCmd, SendArmsCmdResponse, SendArmsCmdRequest
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from geometry_msgs.msg import PoseStamped, PoseArray, Twist
 from controllers.dual_arm_solver import ArmKinematics
@@ -46,8 +46,8 @@ class ArmController:
         
         # 关节状态变量
         self.left_joint_status = {"name": [], "pos": [], "speed": [], "current": [], "temp": [], "error": []}
-        self.left_joint_positions = [0.0, 0.0, 0.0, -0.0, 0.0, 0.0, 0.0]
-        self.right_joint_positions = [0.0, -0.0, 0.0, -0.0, 0.0, 0.0, 0.0]
+        self.left_joint_positions = [0.0, 0.15, 0.0, -0.0, 0.0, 0.0, 0.0]
+        self.right_joint_positions = [0.0, -0.15, 0.0, -0.0, 0.0, 0.0, 0.0]
         self.dual_joint_positions = [self.right_joint_positions, self.left_joint_positions]
 
         # 初始化末端执行器位姿
@@ -177,7 +177,7 @@ class ArmController:
                                  spd_ls: List[float], cur_ls: List[float]) -> bool:
         """
         服务版本的多关节控制命令
-        - 发送命令后等待关节到达目标位置(或超时5秒)
+        - 发送命令后等待关节到达目标位置(或超时3秒)
         - 返回是否成功到达
         """
         # 发送命令
@@ -189,7 +189,7 @@ class ArmController:
         
         # 等待结果或超时
         start_time = time.time()
-        timeout = 5.0  # 5秒超时
+        timeout = 2.5  # 2.5秒超时
         success = False
         
         with self.condition:
