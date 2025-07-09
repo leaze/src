@@ -7,13 +7,13 @@ if __name__ == "__main__":
     right_arm = ArmKinematics(is_left=False)
 
     # 2. 逆向运动学：从位置和方向计算关节角度
-    left_pos = [0.28298403, 0.24302717, 0.06437022]
-    left_quat = [0.706715, 0.03085568, -0.70615245, -0.03083112]
+    left_pos = [0.32415387, 0.20575715, -0.01802673]
+    left_quat = [0.6458372786014214, -0.5310726198734097, -0.3764564706150609, 0.3989192997606842]
     right_pos = [5.04850000e-05, -1.66055208e-01, -1.89748507e-01]
     right_quat = [9.99048232e-01, 4.36191563e-02, 0.00000000e00, -1.47352415e-16]
 
     # 左臂：使用位置和方向（四元数方法）
-    left_joints = [0.0, 0.0, 0.0, -1.57, 0.0, 0.0, 0.0]
+    left_joints = [0.0, 0.0, 0.0, -0.0, 0.0, 0.0, 0.0]
     recovered_left_joints = left_arm.inverse_kinematics(left_pos, target_quaternion=left_quat, use_rotation_matrix=False)
 
     # 右臂：使用位置和方向（旋转矩阵方法）

@@ -67,12 +67,17 @@ class RobotController:
         dual_joint_error_ = np.linalg.norm(np.array(self.arm_controller.left_joint_positions + self.arm_controller.right_joint_positions) - np.array(left_position + right_position))
         rospy.loginfo(f"Arm Location Wedge Status: {dual_joint_error_ < self.arm_controller.joint_tolerance}, dual joint error: {dual_joint_error_:.4f}")
         # 抓取楔子
-        grab_left_wedge_status, grab_right_wedge_status = self.hand_controller.move_both_hands([1.0, 1.0, 1.0, 1.0, 0.1, 0.01], [1.0, 1.0, 1.0, 1.0, 0.1, 0.01])
+        grab_left_wedge_status, grab_right_wedge_status = self.hand_controller.move_both_hands([0.8, 0.8, 0.8, 0.8, 0.1, 0.01], [0.8, 0.8, 0.8, 0.8, 0.1, 0.01])
         rospy.loginfo("Grab wedge succeeded") if grab_left_wedge_status and grab_right_wedge_status else rospy.logerr("Grab wedge failed")
-        # 抬起楔子
-        # move_up_wedge_status = self.arm_controller.move_dual_up(0.05)
-        # rospy.loginfo("Move up wedge succeeded") if move_up_wedge_status else rospy.logerr("Move up wedge failed")
-        return 
+        rospy.sleep(1)
+        if grab_left_wedge_status and grab_right_wedge_status:
+            # 抬起楔子: 1 给定固定坐标
+            # move_up_wedge_status = self.arm_controller.move_dual_up(0.05)
+            # rospy.loginfo("Move up wedge succeeded") if move_up_wedge_status else rospy.logerr("Move up wedge failed")
+            # # 抬起楔子: 2 给定固定pitch关节角旋转
+            left_move_up_wedge_status = self.arm_controller.rotate_single_joint(True, 3, rotate_angle=-0.3)
+            right_move_up_wedge_status = self.arm_controller.rotate_single_joint(False, 3, rotate_angle=-0.3)
+        # return dual_joint_error_ < self.arm_controller.joint_tolerance and grab_left_wedge_status and grab_right_wedge_status and move_up_wedge_status
 
     def move_to_box(self):
         # 移动到纸箱前
@@ -148,7 +153,7 @@ if __name__ == "__main__":
     robot_controller = RobotController()
     hand_init_success = robot_controller.hand_controller.init_hand_status()
     arm_init_success = robot_controller.arm_controller.init_arm_status()
-    # robot_controller.location_wedge()
+    robot_controller.grab_wedge()
     # robot_controller.test()
 
     rospy.spin()
