@@ -11,12 +11,13 @@ class ArmKinematics:
         self.sign = 1 if is_left else -1
 
         # 机械臂参数（从URDF提取）
+        shoulder_pitch_rpy = 0.087266 if is_left else -0.087266
         self.joint_params = [
             # shoulder_pitch (关节0)
             {
                 "pos": np.array([0, self.sign * 0.14539, 0.37721]),
                 "rot_axis": np.array([0, 1, 0]),  # y轴
-                "rot_rpy": np.array([0.087266, 0, 0]),
+                "rot_rpy": np.array([shoulder_pitch_rpy, 0, 0]),
             },  # 初始旋转
             # shoulder_roll (关节1)
             {"pos": np.array([0, self.sign * 0.068, 0]), "rot_axis": np.array([1, 0, 0]), "rot_rpy": np.array([0, 0, 0])},  # x轴
@@ -253,6 +254,7 @@ class ArmKinematics:
 
         # 使用优化方法求解
         result = minimize(objective, initial_angles, method="SLSQP", bounds=bounds)
+        # result = minimize(objective, initial_angles, method="L-BFGS-B", bounds=bounds)
 
         if result.success:
             return result.x
@@ -264,6 +266,7 @@ class ArmKinematics:
             for _ in range(5):
                 new_initial = [np.random.uniform(low, high) for (low, high) in bounds]
                 new_result = minimize(objective, new_initial, method="SLSQP", bounds=bounds)
+                # new_result = minimize(objective, new_initial, method="L-BFGS-B", bounds=bounds)
                 if new_result.success:
                     return new_result.x
                 new_error = objective(new_result.x)
@@ -282,8 +285,8 @@ if __name__ == "__main__":
     right_arm = ArmKinematics(is_left=False)
 
     # 初始关节角度
-    left_joints = [0.0, 0.0, 0.0, -1.57, 0.0, 0.0, 0.0]
-    right_joints = [0.0, -0.0, 0.0, -0.0, 0.0, 0.0, 0.0]
+    left_joints = [-0.4157094955444336, -0.15037822723388672, 0.2577095031738281, -0.48166990280151367, 0.9909520149230957, 0.3322734832763672, -0.610745906829834]
+    right_joints = [-0.4157094955444336, 0.15037822723388672, -0.2577095031738281, -0.48166990280151367, -.9909520149230957, 0.3322734832763672, 0.610745906829834]
 
     # 1. 正向运动学：计算末端位姿（位置和方向）
     left_pos, left_rot, left_quat = left_arm.forward_kinematics(left_joints)

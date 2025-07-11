@@ -1,0 +1,4 @@
+[submodule "control/tracikpy"]
+	path = control/tracikpy
+	url = https://github.com/Star-Cheng/tracikpy.git
+	branch = main

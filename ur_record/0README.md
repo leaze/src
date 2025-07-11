@@ -5,6 +5,13 @@
 # src
 # https://blog.csdn.net/qq_45762996/article/details/136472543
 # https://2048.csdn.net/68219270a5baf817cf4a7b14.html?dp_token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpZCI6MTI2NjAxNSwiZXhwIjoxNzUwMzA3MTU3LCJpYXQiOjE3NDk3MDIzNTcsInVzZXJuYW1lIjoiU3Rhcl9DaGVuZzA5MDEifQ.m7VaGqG021S55ksqPGPncHjzxrj9rebqxjwdb1rQIFE
+
+# 2 tracikpy
+在trac_ik_solver.txt的基础上继承TracIKSolver类，帮我实现类似于dual_arm_solver.txt中的ArmKinematics类，当逆解算失败时尝试使用不同的初始值，并且添加关节限位惩罚
+
+class RobotIKSolver(TracIKSolver):
+    def __init__(self, urdf_file, base_link, tip_link):
+        super().__init__(urdf_file, base_link, tip_link)
 ```
 
 ## 1 任务分解

@@ -104,7 +104,19 @@ rosrun moveit_ros_move_group move_group
 roslaunch panda_moveit_config demo.launch
 ```
 
-## moveit dual arm
+### tracikpy
+
+```shell
+# tracikpy
+sudo apt-get install swig -y
+sudo apt-get install libeigen3-dev liborocos-kdl-dev libkdl-parser-dev liburdfdom-dev libnlopt-dev -y
+git clone https://github.com/Star-Cheng/tracikpy.git
+pip install tracikpy/
+rm -rf control/tracikpy/
+mv tracikpy control/
+```
+
+### moveit dual arm
 
 ```shell
 # https://blog.csdn.net/qq_45762996/article/details/136472543
