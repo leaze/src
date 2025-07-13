@@ -84,6 +84,18 @@ class InspireController:
         rospy.loginfo("Release both hands successfully") if release_left_hand_status and release_right_hand_status else rospy.logerr("Release both hands failed")
         return release_left_hand_status and release_right_hand_status
     
+    def grip_wedge(self) -> bool:
+        """
+        握住双只手
+        :return: 是否成功
+        """
+        # 打印调试信息
+        grip_left_hands_status, grip_right_hands_status = self.move_both_hands([0.8, 0.8, 0.8, 0.8, 0.1, 0.01], [0.8, 0.8, 0.8, 0.8, 0.1, 0.01])
+        rospy.sleep(1.5)
+        rospy.loginfo("Both hands grip wedge successfully") if grip_left_hands_status and grip_right_hands_status else rospy.logerr("Both hands grip wedge failed")
+        return grip_left_hands_status and grip_right_hands_status
+
+
     def init_hand_status(self):
         """
         初始化手的状态
