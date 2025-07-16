@@ -19,13 +19,13 @@ if __name__ == "__main__":
     # 右臂：使用位置和方向（旋转矩阵方法）
     recovered_right_joints = right_arm.inverse_kinematics(right_pos, target_quaternion=right_quat, use_rotation_matrix=False)
 
-    print("recovered_left_joints", recovered_left_joints)
-    print("recovered_right_joints", recovered_right_joints)
+    print("left_joints = ", list(recovered_left_joints))
+    print("right_joints = ", list(recovered_right_joints))
 
-    # 3. 正向运动学：从关节角度计算位置和方向
-    left_pos, _, left_quat = left_arm.forward_kinematics(recovered_left_joints)
-    right_pos, _, right_quat = right_arm.forward_kinematics(recovered_right_joints)
-    print("left_pos", left_pos)
-    print("left_quat", left_quat)
-    print("right_pos", right_pos)
-    print("right_quat", right_quat)
+    # # 3. 正向运动学：从关节角度计算位置和方向
+    # left_pos, _, left_quat = left_arm.forward_kinematics(recovered_left_joints)
+    # right_pos, _, right_quat = right_arm.forward_kinematics(recovered_right_joints)
+    # print("left_pos", left_pos)
+    # print("left_quat", left_quat)
+    # print("right_pos", right_pos)
+    # print("right_quat", right_quat)

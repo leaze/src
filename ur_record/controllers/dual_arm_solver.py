@@ -9,6 +9,7 @@ class ArmKinematics:
     def __init__(self, is_left=True):
         self.is_left = is_left
         self.sign = 1 if is_left else -1
+        self.ik_method = "L-BFGS-B"  # 优化方法: SLSQP, L-BFGS-B, trust-constr, Powell
 
         # 机械臂参数（从URDF提取）
         shoulder_pitch_rpy = 0.087266 if is_left else -0.087266
@@ -253,7 +254,7 @@ class ArmKinematics:
         bounds = self.joint_limits
 
         # 使用优化方法求解
-        result = minimize(objective, initial_angles, method="SLSQP", bounds=bounds)
+        result = minimize(objective, initial_angles, method=self.ik_method, bounds=bounds)
         # result = minimize(objective, initial_angles, method="L-BFGS-B", bounds=bounds)
 
         if result.success:
@@ -265,7 +266,7 @@ class ArmKinematics:
 
             for _ in range(5):
                 new_initial = [np.random.uniform(low, high) for (low, high) in bounds]
-                new_result = minimize(objective, new_initial, method="SLSQP", bounds=bounds)
+                new_result = minimize(objective, new_initial, method=self.ik_method, bounds=bounds)
                 # new_result = minimize(objective, new_initial, method="L-BFGS-B", bounds=bounds)
                 if new_result.success:
                     return new_result.x

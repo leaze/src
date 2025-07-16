@@ -7,14 +7,14 @@ if __name__ == "__main__":
     right_arm = ArmKinematics(is_left=False)
 
     # 初始关节角度
-    left_joints = [-0.4157094955444336, -0.15037822723388672, 0.2577095031738281, -0.48166990280151367, 0.9909520149230957, 0.3322734832763672, -0.610745906829834]
-    right_joints = [-0.4157094955444336, 0.15037822723388672, -0.2577095031738281, -0.48166990280151367, -.9909520149230957, 0.3322734832763672, 0.610745906829834]
+    left_joints =  [-0.504333764830546, -0.19203258438311485, 0.5687797544031549, -0.3358517591248969, 0.6184368370260153, 0.33441139366286493, -0.7184362322649265]
+    right_joints =  [-0.5061886639850919, 0.19123308433375877, -0.569791921351373, -0.33175675879944155, -0.6171442084783899, 0.33267085294472976, 0.7196996180504094]
 
     # 1. 正向运动学：计算末端位姿（位置和方向）
     left_pos, left_rot, left_quat = left_arm.forward_kinematics(left_joints)
     right_pos, right_rot, right_quat = right_arm.forward_kinematics(right_joints)
 
-    print(f"左臂末端位置xyz: (相对于pelvis): {left_pos}")
-    print(f"左臂末端四元数wxyz: {left_quat}")
-    print(f"右臂末端位置xyz: (相对于pelvis): {right_pos}")
-    print(f"右臂末端四元数wxyz: {right_quat}")
+    print(f"left_pos = {list(left_pos)}")
+    print(f"left_quat = {list(left_quat)}")
+    print(f"right_pos = {list(right_pos)}")
+    print(f"right_quat = {list(right_quat)}")
