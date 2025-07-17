@@ -9,7 +9,7 @@ class ArmKinematics:
     def __init__(self, is_left=True):
         self.is_left = is_left
         self.sign = 1 if is_left else -1
-        self.ik_method = "L-BFGS-B"  # 优化方法: SLSQP, L-BFGS-B, trust-constr, Powell
+        self.ik_method = "SLSQP"  # 优化方法: SLSQP, L-BFGS-B, trust-constr, Powell
 
         # 机械臂参数（从URDF提取）
         shoulder_pitch_rpy = 0.087266 if is_left else -0.087266
@@ -61,7 +61,7 @@ class ArmKinematics:
         """线性插值位置"""
         return np.linspace(start_pos, end_pos, num_points)
 
-    def generate_trajectory_by_dist(self, start_pos_, end_pos_, dist_=0.02):
+    def generate_trajectory_by_dist(self, start_pos_, end_pos_, dist_=0.05):
         """生成轨迹"""
         distance = np.linalg.norm(np.array(start_pos_) - np.array(end_pos_))
         num_points = int(distance / dist_)

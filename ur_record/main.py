@@ -33,30 +33,19 @@ class RobotController:
     def location_wedge(self):
         # 移动各个关节轴
         left_position, right_position = [0.0, 0.15, 0.0, -1.0, 0.0, 0.0, -0.0], [0.0, -0.15, 0.0, -1.0, -0.0, 0.0, 0.0]
-        self.arm_controller.send_arms_cmd_pos(self.arm_controller.joint_names[True] + self.arm_controller.joint_names[False], left_position + right_position, [self.arm_controller.joint_speed] * 14, [self.arm_controller.joint_current] * 14)
-        rospy.sleep(2.0)
+        self.arm_controller.send_arms_cmd_pos_service(self.arm_controller.joint_names[True] + self.arm_controller.joint_names[False], left_position + right_position, [self.arm_controller.joint_speed] * 14, [self.arm_controller.joint_current] * 14)
+        # rospy.sleep(2.0)
         dual_joint_error_ = np.linalg.norm(np.array(self.arm_controller.left_joint_positions + self.arm_controller.right_joint_positions) - np.array(left_position + right_position))
         rospy.loginfo(f"Arm Location Step1 Status: {dual_joint_error_ < self.arm_controller.joint_tolerance}, dual joint error: {dual_joint_error_:.4f}")
         # 定位楔子
-        left_target_pos_ = [0.32371069, 0.20492773, -0.06846677]
+        left_target_pos_ = [0.15371069, 0.20492773, -0.01846677]
         left_target_quat_ = [0.6457788789185539, -0.5312803574078042, -0.37486812155046495, 0.40023082442580193]
-        left_start_pos_ = self.arm_controller.left_joint_positions
-        left_target_joint_ = self.arm_controller.arm_kinematics[True].inverse_kinematics(left_target_pos_, left_target_quat_, left_start_pos_)
-        
+
         right_target_pos_ = [0.32371069, -0.20492773, -0.06846677]
         right_target_quat_ = [0.645778878918554, 0.5312803574078042, -0.37486812155046495, -0.40023082442580193]
-        right_start_pos_ = self.arm_controller.right_joint_positions
-        right_target_joint_ = self.arm_controller.arm_kinematics[False].inverse_kinematics(right_target_pos_, right_target_quat_, right_start_pos_)
-        rospy.loginfo("Location Wedge suceessed")
-        self.arm_controller.send_arms_cmd_pos(self.arm_controller.joint_names[True] + self.arm_controller.joint_names[False], list(left_target_joint_) + list(right_target_joint_), [self.arm_controller.joint_speed] * 14, [self.arm_controller.joint_current] * 14)
-        rospy.sleep(2.0)
-        
-        dual_joint_error_ = np.linalg.norm(np.array(self.arm_controller.left_joint_positions + self.arm_controller.right_joint_positions) - np.array(list(left_target_joint_) + list(right_target_joint_)))
-        rospy.loginfo(f"Arm Location Step1 Status: {dual_joint_error_ < self.arm_controller.joint_tolerance}, dual joint error: {dual_joint_error_:.4f}")
-        # 抓取楔子
-        grab_left_wedge_status, grab_right_wedge_status = self.hand_controller.move_both_hands([0.8, 0.8, 0.8, 0.8, 0.1, 0.01], [0.8, 0.8, 0.8, 0.8, 0.1, 0.01])
-        rospy.loginfo("Grab wedge succeeded") if grab_left_wedge_status and grab_right_wedge_status else rospy.logerr("Grab wedge failed")
-        rospy.sleep(1)
+        # 发送消息
+        move_wedge_success = self.arm_controller.move_dual_arm_by_xyz(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
+        return move_wedge_success
 
     def grab_wedge(self):
         # 移动各个关节轴
@@ -91,9 +80,14 @@ class RobotController:
 
     def insert_wedge(self):
         # 插入楔子
-        inser_wedge_status = self.arm_controller.move_dual_forward(0.05)
-        rospy.loginfo("Move forward wedge succeeded") if inser_wedge_status else rospy.logerr("Move forward wedge failed")
-        return inser_wedge_status
+        left_target_pos_ = [0.32371069, 0.20492773, -0.06846677]
+        left_target_quat_ = [0.6457788789185539, -0.5312803574078042, -0.37486812155046495, 0.40023082442580193]
+
+        right_target_pos_ = [0.25371069, -0.20492773, -0.01846677]
+        right_target_quat_ = [0.645778878918554, 0.5312803574078042, -0.37486812155046495, -0.40023082442580193]
+        # 发送消息
+        insert_wedge_success = self.arm_controller.move_dual_arm_by_xyz(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
+        return insert_wedge_success
 
     def grab_box(self):
         # 抓取纸箱
@@ -142,27 +136,20 @@ class RobotController:
         insert_wedge_success = self.insert_wedge() if move_wedge_success else False
 
     def test(self):
-        # 移动各个关节轴
-        print("Service test start")
-        left_position = [-0.712834154641907, -0.03955463815729167, 0.4867647932568923, 0.2026527607047936, 0.7588279682947596, 0.09691369817309022, -0.9072397551933101]
-        right_position = [-0.712834154641907, 0.03955463815729167, -0.4867647932568923, 0.2026527607047936, -0.7588279682947596, 0.09691369817309022, 0.9072397551933101]
-        right_position = self.right_init_joints
-        self.arm_controller.send_arms_cmd_pos_service(self.arm_controller.joint_names[True] + self.arm_controller.joint_names[False], left_position + right_position, [self.arm_controller.joint_speed] * 14, [self.arm_controller.joint_current] * 14)
-        self.hand_controller.grip_wedge()
+        # 抓取楔子
+        self.grab_wedge()
+        # 抬起楔子
         self.lift_wedge()
-        left_position = [0.18982091844311913, 0.33477392974885584, -0.645854768961989, -1.5611050390534627, 1.8114655917507176, -0.18542333917518908, -0.24889762080904546]
-        right_position = [0.18982091844311913, -0.33477392974885584, 0.645854768961989, -1.5611050390534627, -1.8114655917507176, -0.18542333917518908, 0.24889762080904546]
-        right_position = self.right_init_joints
-        self.arm_controller.send_arms_cmd_pos_service(self.arm_controller.joint_names[True] + self.arm_controller.joint_names[False], left_position + right_position, [self.arm_controller.joint_speed] * 14, [self.arm_controller.joint_current] * 14)
-        print("Service test end")
-
+        # 移动到纸箱前
+        self.move_wedge()
+        # 插入楔子
+        self.insert_wedge()
 
 if __name__ == "__main__":
     rospy.init_node("RobotControllerNode")
     robot_controller = RobotController()
-    robot_controller.get_arm_state()
+    # robot_controller.get_arm_state()
     hand_init_success = robot_controller.hand_controller.init_hand_status()
     arm_init_success = robot_controller.arm_controller.init_arm_status()
-    # robot_controller.grab_wedge()
-    # robot_controller.move_wedge()
-    # robot_controller.test()
+    robot_controller.test()
+    print("Service test end")

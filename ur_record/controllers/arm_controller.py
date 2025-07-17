@@ -14,6 +14,7 @@ from geometry_msgs.msg import PoseStamped, PoseArray, Twist
 from controllers.dual_arm_solver import ArmKinematics
 # from controllers.arms_solver import RobotIKSolver
 from std_srvs.srv import Trigger, TriggerResponse
+from scipy.spatial.transform import Rotation as R
 from sensor_msgs.msg import JointState
 from std_msgs.msg import Header
 from typing import List
@@ -30,6 +31,7 @@ class ArmController:
         self.arm_left_kinematics = ArmKinematics(True)
         self.arm_right_kinematics = ArmKinematics(False)
         self.arm_kinematics = [self.arm_right_kinematics, self.arm_left_kinematics]
+        self.mirror_ls = [1, -1, -1, 1, -1, 1, -1]
 
         # 控制器参数
         self.joint_speed = rospy.get_param("~joint_speed", 1)  # rpm
@@ -75,6 +77,23 @@ class ArmController:
         # 初始化关节状态
         # self.init_arm_status()
         rospy.sleep(0.1)
+
+    def ik_dual(self, left_target_position, left_target_quaternion, left_initial_angles, right_target_position, right_target_quaternion, right_initial_angles):
+        # 优先求解误差小的臂
+        left_joints = self.arm_left_kinematics.inverse_kinematics(left_target_position, left_target_quaternion, left_initial_angles)
+        right_joints = self.arm_right_kinematics.inverse_kinematics(right_target_position, right_target_quaternion, right_initial_angles)
+        # 正解算验证误差
+        left_pos, _, left_quat = self.arm_left_kinematics.forward_kinematics(left_joints)
+        right_pos, _, right_quat = self.arm_right_kinematics.forward_kinematics(right_joints)
+        left_diff = np.linalg.norm(left_pos - left_target_position)
+        right_diff = np.linalg.norm(right_pos - right_target_position)
+        if left_diff < right_diff:
+            for i in range(len(right_joints)):
+                left_joints[i]= right_joints[i] * self.mirror_ls[i]
+        else:
+            for i in range(len(left_joints)):
+                right_joints[i]= left_joints[i] * self.mirror_ls[i]
+        return left_joints, right_joints
 
     def arm_status_callback(self, arm_status_msg: MotorStatusMsg):
         name_ls_, pos_ls_, speed_ls_, current_ls_, temperature_ls_, error_ls_, dual_joint_positions_ls_ = [], [], [], [], [], [], [0.0] * 14
@@ -231,8 +250,8 @@ class ArmController:
 
     def rotate_dual_joint(self, left_joints, right_joints):
         # 移动各个关节轴
-        self.send_arms_cmd_pos(self.joint_names[True] + self.joint_names[False], left_joints + right_joints, [self.joint_speed] * 14, [self.joint_current] * 14)
-        rospy.sleep(3)
+        self.send_arms_cmd_pos_service(self.joint_names[True] + self.joint_names[False], left_joints + right_joints, [self.joint_speed] * 14, [self.joint_current] * 14)
+        # rospy.sleep(3)
         left_true_error_ = np.linalg.norm(np.array(left_joints) - np.array(self.dual_joint_positions[True]))  # 左臂实际末端位置误差
         right_true_error_ = np.linalg.norm(np.array(right_joints) - np.array(self.dual_joint_positions[False]))  # 右臂实际末端位置误差
         left_arm_move_status, right_arm_move_status = left_true_error_ < self.joint_tolerance, right_true_error_ < self.joint_tolerance
@@ -272,6 +291,45 @@ class ArmController:
             # print("Joint Angles (deg):", np.rad2deg(joint_angles_).round(2))
         return joint_trajectory, all_positions
 
+    def move_along_direction(self, position, quaternion, direction_vector, distance=0.05):
+        """
+        沿着指定方向（在当前朝向基础上）移动一定距离。
+        :param position: 当前位置, 长度为3的数组或列表
+        :param quaternion: 当前朝向的四元数(w, x, y, z)
+        :param direction_vector: 方向向量（局部坐标系中的方向，例如 [1,0,0] 表示正X方向)
+        :param distance: 移动距离, 默认为0.1米
+        :return: 新的位姿位置(numpy数组)
+        """
+        # 转为numpy数组
+        position = np.array(position)
+        quaternion = np.array(quaternion)
+        direction_vector = np.array(direction_vector)
+        
+        # 转换为scipy支持的四元数顺序(x, y, z, w)
+        quat_xyzw = [quaternion[1], quaternion[2], quaternion[3], quaternion[0]]
+        
+        # 生成旋转对象
+        rotation = R.from_quat(quat_xyzw)
+        
+        # 转换局部方向向量到全局
+        global_direction = rotation.apply(direction_vector)
+        
+        # 计算偏移
+        displacement = distance * global_direction
+        
+        # 计算新位置
+        new_position = position + displacement
+        
+        return new_position
+
+    def move_single_arm_tr(self, is_left, target_pos, target_quat):
+        trajectory_, all_points_ = self.set_end_effector_target(is_left, target_pos, target_quat)
+        # 创建整个轨迹消息
+        for j, (tr_, pos_) in enumerate(zip(trajectory_, all_points_)):
+            speeds = [self.joint_speed] * 7  # RPM值
+            currents = [self.joint_current] * 7  # 电流值(安培)
+            self.send_arms_cmd_pos_service(self.joint_names[is_left], tr_, speeds, currents)
+
     def move_single_arm_by_xyz(self, is_left: bool, target_pos: np.ndarray, target_quat: np.ndarray):
         left_target_joint_ = self.arm_kinematics[is_left].inverse_kinematics(target_pos, target_quat, self.dual_joint_positions[is_left])
         self.send_arms_cmd_pos(self.joint_names[is_left], left_target_joint_, [self.joint_speed] * 7, [self.joint_current] * 7)
@@ -281,10 +339,11 @@ class ArmController:
         return joint_error_ < self.joint_tolerance
 
     def move_dual_arm_by_xyz(self, left_target_pos, left_target_quat, right_target_pos, right_target_quat):
-        left_target_joint_ = self.arm_kinematics[True].inverse_kinematics(left_target_pos, left_target_quat, self.dual_joint_positions[True])
-        right_target_joint_ = self.arm_kinematics[False].inverse_kinematics(right_target_pos, right_target_quat, self.dual_joint_positions[False])
-        self.send_arms_cmd_pos(self.joint_names[True] + self.joint_names[False], list(left_target_joint_) + list(right_target_joint_), [self.joint_speed] * 14, [self.joint_current] * 14)
-        rospy.sleep(3.0)
+        # left_target_joint_ = self.arm_kinematics[True].inverse_kinematics(left_target_pos, left_target_quat, self.dual_joint_positions[True])
+        # right_target_joint_ = self.arm_kinematics[False].inverse_kinematics(right_target_pos, right_target_quat, self.dual_joint_positions[False])
+        left_target_joint_, right_target_joint_ = self.ik_dual(left_target_pos, left_target_quat, self.dual_joint_positions[True], right_target_pos, right_target_quat, self.dual_joint_positions[False])
+        self.send_arms_cmd_pos_service(self.joint_names[True] + self.joint_names[False], list(left_target_joint_) + list(right_target_joint_), [self.joint_speed] * 14, [self.joint_current] * 14)
+        # rospy.sleep(3.0)
         left_true_error2_ = np.linalg.norm(np.array(left_target_pos) - np.array(self.left_end_effector_pose))  # 左臂实际末端位置误差
         right_true_error2_ = np.linalg.norm(np.array(right_target_pos) - np.array(self.right_end_effector_pose))  # 右臂实际末端位置误差
         left_arm_move_status, right_arm_move_status = left_true_error2_ < self.joint_tolerance, right_true_error2_ < self.joint_tolerance
