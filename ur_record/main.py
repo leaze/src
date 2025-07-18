@@ -83,7 +83,7 @@ class RobotController:
         left_target_pos_ = [0.32371069, 0.20492773, -0.06846677]
         left_target_quat_ = [0.6457788789185539, -0.5312803574078042, -0.37486812155046495, 0.40023082442580193]
 
-        right_target_pos_ = [0.25371069, -0.20492773, -0.01846677]
+        right_target_pos_ = [0.32371069, -0.20492773, -0.01846677]
         right_target_quat_ = [0.645778878918554, 0.5312803574078042, -0.37486812155046495, -0.40023082442580193]
         # 发送消息
         insert_wedge_success = self.arm_controller.move_dual_arm_by_xyz(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)

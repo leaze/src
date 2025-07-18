@@ -20,3 +20,26 @@ ros2 launch rosbridge_server rosbridge_websocket_launch.xml
 python3 pub_msg.py  # 发布消息
 python3 sub_msg.py  # 订阅消息
 ```
+
+## nav2 rosbridge
+
+```shell
+# 1 ros2作为rosbridge-server
+# ros2 host
+ros2 launch rosbridge_server rosbridge_websocket_launch.xml
+python3 ur_robot/navigation/navigation_server.py
+python3 ur_robot/navigation/navigation_client.py
+# ros1 client
+
+```
+
+## moveit2 rosbridge
+
+```shell
+# ros2 as rosbridge-server
+# ros2 host
+ros2 launch rosbridge_server rosbridge_websocket_launch.xml
+python3 ur_robot/moveit2/ik_service_dual.py
+# ros1 client
+python3 ur_robot/rosbridge/pub_joints.py
+```

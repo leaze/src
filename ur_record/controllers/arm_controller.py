@@ -12,6 +12,7 @@ from bodyctrl_msgs.msg import CmdSetMotorPosition, SetMotorPosition, MotorStatus
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from geometry_msgs.msg import PoseStamped, PoseArray, Twist
 from controllers.dual_arm_solver import ArmKinematics
+from moveit.moveit_solver import MoveItSolver
 # from controllers.arms_solver import RobotIKSolver
 from std_srvs.srv import Trigger, TriggerResponse
 from scipy.spatial.transform import Rotation as R
@@ -28,8 +29,10 @@ import time
 class ArmController:
     def __init__(self):
         # 左右臂运动学求解器
-        self.arm_left_kinematics = ArmKinematics(True)
-        self.arm_right_kinematics = ArmKinematics(False)
+        # self.arm_left_kinematics = ArmKinematics(True)
+        # self.arm_right_kinematics = ArmKinematics(False)
+        self.arm_left_kinematics = MoveItSolver(True)
+        self.arm_right_kinematics = MoveItSolver(False)
         self.arm_kinematics = [self.arm_right_kinematics, self.arm_left_kinematics]
         self.mirror_ls = [1, -1, -1, 1, -1, 1, -1]
 
