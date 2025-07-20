@@ -38,13 +38,14 @@ class RobotController:
         dual_joint_error_ = np.linalg.norm(np.array(self.arm_controller.left_joint_positions + self.arm_controller.right_joint_positions) - np.array(left_position + right_position))
         rospy.loginfo(f"Arm Location Step1 Status: {dual_joint_error_ < self.arm_controller.joint_tolerance}, dual joint error: {dual_joint_error_:.4f}")
         # 定位楔子
-        left_target_pos_ = [0.15371069, 0.20492773, -0.01846677]
-        left_target_quat_ = [0.6457788789185539, -0.5312803574078042, -0.37486812155046495, 0.40023082442580193]
+        left_target_pos_ = [0.4409711531681323, 0.21492773315409157, -0.20711783728977194]
+        left_target_quat_ = [-0.5824993766583517, 0.5851301607905339, 0.4671733566939692, -0.316332461061405]
 
-        right_target_pos_ = [0.32371069, -0.20492773, -0.06846677]
-        right_target_quat_ = [0.645778878918554, 0.5312803574078042, -0.37486812155046495, -0.40023082442580193]
+        right_target_pos_ = [0.44098031001017535, -0.21493083517530405, -0.207130417934516805]
+        right_target_quat_ = [0.5825471357726449, 0.5848687698290453, -0.4673399686813965, -0.31648176938746125]
         # 发送消息
         move_wedge_success = self.arm_controller.move_dual_arm_by_xyz(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
+        grab_wedge_status = self.hand_controller.grip_wedge()
         return move_wedge_success
 
     def grab_wedge(self):
@@ -52,27 +53,32 @@ class RobotController:
         left_position, right_position = [0.0, 0.15, 0.0, -1.0, 0.0, 0.0, -0.0], [0.0, -0.15, 0.0, -1.0, -0.0, 0.0, 0.0]
         grab_step1_success = self.arm_controller.rotate_dual_joint(left_position, right_position)
         # 定位楔子
-        left_position = [-0.4157094955444336, -0.15037822723388672, 0.2577095031738281, -0.48166990280151367, 0.9909520149230957, 0.3322734832763672, -0.610745906829834]
-        right_position = [-0.4157094955444336, 0.15037822723388672, -0.2577095031738281, -0.48166990280151367, -0.9909520149230957, 0.3322734832763672, 0.610745906829834]
+        left_position = [-0.4592773565105143, -0.10781207465494458, 0.08085273463238411, -0.372475432520502, 1.1618900490820394, 0.26562390329576485, -0.6432547546848081]
+        right_position =  [-0.4592773565105143, 0.10781207465494458, -0.08085273463238411, -0.372475432520502, -1.1618900490820394, 0.26562390329576485, 0.6432547546848081]
         grab_step2_success = self.arm_controller.rotate_dual_joint(left_position, right_position)
         # 抓取楔子
         grab_wedge_status = self.hand_controller.grip_wedge()
+        rospy.sleep(1)
+        grab_box_status = self.hand_controller.grip_box()
         return grab_step1_success and grab_step2_success and grab_wedge_status
 
     def lift_wedge(self):
         # # 抬起楔子: 1 给定固定各个关节角度
         # 移动各个关节轴
-        left_position = [-0.7157459259033203, -0.15037822723388672, 0.2577095031738281, -0.48166990280151367, 0.9909520149230957, 0.3322734832763672, -0.610745906829834]
-        right_position = [-0.7157459259033203, 0.15040206909179688, -0.2577328681945801, -0.4817180633544922, -0.9909753799438477, 0.33171796798706055, 0.610295295715332]
-        dual_rotate_success = self.arm_controller.rotate_dual_joint(left_position, right_position)
-        return dual_rotate_success
+        # left_position = [-0.7157459259033203, -0.15037822723388672, 0.2577095031738281, -0.48166990280151367, 0.9909520149230957, 0.3322734832763672, -0.610745906829834]
+        # right_position = [-0.7157459259033203, 0.15040206909179688, -0.2577328681945801, -0.4817180633544922, -0.9909753799438477, 0.33171796798706055, 0.610295295715332]
+        self.arm_controller.rotate_single_joint(True, 0, rotate_angle=-0.2)
+        self.arm_controller.rotate_single_joint(False, 0, rotate_angle=-0.2)
+        rospy.sleep(1)
+        # dual_rotate_success = self.arm_controller.rotate_dual_joint(left_position, right_position)
+        # return dual_rotate_success
 
     def move_wedge(self):
         # 左手移动到纸箱前
-        left_target_pos_ = [0.15371069, 0.20492773, -0.01846677]
+        left_target_pos_ = [0.10371069, 0.19029899, -0.01846677]
         left_target_quat_ = [0.6457788789185539, -0.5312803574078042, -0.37486812155046495, 0.40023082442580193]
         # 右手移动到纸箱前
-        right_target_pos_ = [0.15371069, -0.20492773, -0.01846677]
+        right_target_pos_ = [0.10371069, -0.19029899, -0.01846677]
         right_target_quat_ = [0.645778878918554, 0.5312803574078042, -0.37486812155046495, -0.40023082442580193]
         # 发送消息
         move_wedge_success = self.arm_controller.move_dual_arm_by_xyz(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
@@ -80,10 +86,10 @@ class RobotController:
 
     def insert_wedge(self):
         # 插入楔子
-        left_target_pos_ = [0.32371069, 0.20492773, -0.06846677]
+        left_target_pos_ = [0.32371069, 0.19029899, -0.06846677]
         left_target_quat_ = [0.6457788789185539, -0.5312803574078042, -0.37486812155046495, 0.40023082442580193]
 
-        right_target_pos_ = [0.32371069, -0.20492773, -0.01846677]
+        right_target_pos_ = [0.32371069, -0.19029899, -0.01846677]
         right_target_quat_ = [0.645778878918554, 0.5312803574078042, -0.37486812155046495, -0.40023082442580193]
         # 发送消息
         insert_wedge_success = self.arm_controller.move_dual_arm_by_xyz(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
@@ -97,10 +103,10 @@ class RobotController:
         move_left_status = self.arm_controller.rotate_joint([0.0, -0.1, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0])
         # 3 移动到抓取点
         # 3.1 左手移动到纸箱抓取点
-        left_target_pos_ = [0.15371069, 0.20492773, -0.06846677]
+        left_target_pos_ = [0.12371069, 0.21492773, -0.06846677]
         left_target_quat_ = [0.6457788789185539, -0.5312803574078042, -0.37486812155046495, 0.40023082442580193]
         # 3.2 右手移动到纸箱抓取点
-        right_target_pos_ = [0.15371069, -0.20492773, -0.06846677]
+        right_target_pos_ = [0.12371069, -0.21492773, -0.06846677]
         right_target_quat_ = [0.645778878918554, 0.5312803574078042, -0.37486812155046495, -0.40023082442580193]
         # 3.3 发送消息
         move_to_box_success = self.arm_controller.move_dual_arm_by_xyz(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)

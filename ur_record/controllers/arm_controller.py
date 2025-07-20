@@ -11,6 +11,7 @@
 from bodyctrl_msgs.msg import CmdSetMotorPosition, SetMotorPosition, MotorStatusMsg, MotorStatus
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from geometry_msgs.msg import PoseStamped, PoseArray, Twist
+from coordinated.coordinated_solver import StrictCoordinatedRobotIKSolver
 from controllers.dual_arm_solver import ArmKinematics
 from moveit.moveit_solver import MoveItSolver
 # from controllers.arms_solver import RobotIKSolver
@@ -24,6 +25,7 @@ import threading
 import rospy
 import math
 import time
+from tracik.robust_solver import RobotController
 
 
 class ArmController:
@@ -31,8 +33,8 @@ class ArmController:
         # 左右臂运动学求解器
         # self.arm_left_kinematics = ArmKinematics(True)
         # self.arm_right_kinematics = ArmKinematics(False)
-        self.arm_left_kinematics = MoveItSolver(True)
-        self.arm_right_kinematics = MoveItSolver(False)
+        self.arm_left_kinematics = RobotController(True)
+        self.arm_right_kinematics  = RobotController(False)
         self.arm_kinematics = [self.arm_right_kinematics, self.arm_left_kinematics]
         self.mirror_ls = [1, -1, -1, 1, -1, 1, -1]
 
@@ -92,10 +94,10 @@ class ArmController:
         right_diff = np.linalg.norm(right_pos - right_target_position)
         if left_diff < right_diff:
             for i in range(len(right_joints)):
-                left_joints[i]= right_joints[i] * self.mirror_ls[i]
+                right_joints[i]= left_joints[i] * self.mirror_ls[i]
         else:
             for i in range(len(left_joints)):
-                right_joints[i]= left_joints[i] * self.mirror_ls[i]
+                left_joints[i]= right_joints[i] * self.mirror_ls[i]
         return left_joints, right_joints
 
     def arm_status_callback(self, arm_status_msg: MotorStatusMsg):
@@ -354,6 +356,49 @@ class ArmController:
         rospy.logerr(f"left_true_error2_ = {left_true_error2_}, right_true_error2_ = {right_true_error2_}")
         return left_true_error2_ < self.joint_tolerance, right_true_error2_ < self.joint_tolerance
 
+    def move_dual_arm_by_xyz_tr(self, left_target_pos, left_target_quat, right_target_pos, right_target_quat):
+        # 分别计算左右臂的轨迹
+        traj_left_joints_ = self.arm_kinematics[True].generate_trajectory_by_dist(self.left_end_effector_pose, left_target_pos, self.tr_distance)
+        traj_right_joints_ = self.arm_kinematics[False].generate_trajectory_by_dist(self.right_end_effector_pose, right_target_pos, self.tr_distance)
+        n_left = len(traj_left_joints_)
+        n_right = len(traj_right_joints_)
+        n_points = max(n_left, n_right)
+        # 轨迹插值同步
+        if n_left != n_right:
+            # 时间归一化处理
+            orig_index_left = np.linspace(0, 1, n_left)
+            orig_index_right = np.linspace(0, 1, n_right)
+            new_index = np.linspace(0, 1, n_points)
+
+            # 插值处理
+            synced_left = []
+            for joint_idx in range(7):
+                joint_values = [point[joint_idx] for point in traj_left_joints_]
+                synced_values = np.interp(new_index, orig_index_left, joint_values)
+                synced_left.append(synced_values)
+            traj_left_joints_ = np.array(synced_left).T
+
+            synced_right = []
+            for joint_idx in range(7):
+                joint_values = [point[joint_idx] for point in traj_right_joints_]
+                synced_values = np.interp(new_index, orig_index_right, joint_values)
+                synced_right.append(synced_values)
+            traj_right_joints_ = np.array(synced_right).T
+        for i in range(n_points):
+            print("traj_left_joints_", traj_left_joints_[i])
+            print("traj_right_joints_", traj_right_joints_[i])
+            left_target_pos = traj_left_joints_[i]
+            right_target_pos = traj_right_joints_[i]
+            left_target_joint_, right_target_joint_ = self.ik_dual(left_target_pos, left_target_quat, self.dual_joint_positions[True], right_target_pos, right_target_quat, self.dual_joint_positions[False])
+            self.send_arms_cmd_pos_service(self.joint_names[True] + self.joint_names[False], list(left_target_joint_) + list(right_target_joint_), [self.joint_speed] * 14, [self.joint_current] * 14)
+            # rospy.sleep(3.0)
+            left_true_error2_ = np.linalg.norm(np.array(left_target_pos) - np.array(self.left_end_effector_pose))  # 左臂实际末端位置误差
+            right_true_error2_ = np.linalg.norm(np.array(right_target_pos) - np.array(self.right_end_effector_pose))  # 右臂实际末端位置误差
+            left_arm_move_status, right_arm_move_status = left_true_error2_ < self.joint_tolerance, right_true_error2_ < self.joint_tolerance
+            rospy.loginfo("Arm Move Success") if left_arm_move_status and right_arm_move_status else rospy.loginfo("Arm Move Failed")
+            rospy.logerr(f"left_true_error2_ = {left_true_error2_}, right_true_error2_ = {right_true_error2_}")
+            return left_true_error2_ < self.joint_tolerance, right_true_error2_ < self.joint_tolerance
+
     def move_single_forward(self, is_left: bool, distance: float) -> bool:
         """移动单只臂"""
         start_pos_, start_rot_, start_quat_ = self.arm_kinematics[is_left].forward_kinematics(self.dual_joint_positions[is_left])
@@ -404,15 +449,11 @@ class ArmController:
 
     def move_dual_forward(self, distance: float):
         """前进指定距离"""
-        rospy.logerr(f"self.left_joint_positions = {self.left_joint_positions}")
-        rospy.logerr(f"self.left_joint_positions = {self.right_joint_positions}")
         left_start_pos_, left_start_rot_, left_start_quat_ = self.arm_kinematics[True].forward_kinematics(self.left_joint_positions)
         right_start_pos_, right_start_rot_, right_start_quat_ = self.arm_kinematics[False].forward_kinematics(self.right_joint_positions)
         # 计算新的目标位置
         left_target_pos_ = left_start_pos_ + distance * np.array([1, 0, 0])  # 向前移动
         right_target_pos_ = right_start_pos_ + distance * np.array([1, 0, 0])  # 向前移动
-        rospy.logerr(f"left_target_pos_ = {left_target_pos_}")
-        rospy.logerr(f"right_target_pos_ = {right_target_pos_}")
         # 使用相同的姿态
         left_target_quat_ = left_start_quat_
         right_target_quat_ = right_start_quat_

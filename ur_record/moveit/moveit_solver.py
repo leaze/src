@@ -16,6 +16,7 @@ class MoveItSolver():
         
     async def call_compute_ik_left(self, position, orientation):
         uri = "ws://localhost:9090"
+        # uri = "ws://192.168.41.2:9090"
         async with websockets.connect(uri) as websocket:
 
             # 构造服务调用请求
@@ -52,10 +53,13 @@ class MoveItSolver():
         result = asyncio.run(self.call_compute_ik_left(target_position, target_quaternion))
         dict_obj = json.loads(result)
         if dict_obj["result"]:
-            return dict_obj["values"]["joints"]
+            if len(dict_obj["values"]["joints"]) == 0:
+                return initial_angles
+            else:
+                return dict_obj["values"]["joints"]
         else:
             rospy.logerr("Moveit Inverse kinematics failed")
-            return [0.0] * 7
+            return initial_angles
     
     def forward_kinematics(self, joint_angles):
         """
@@ -64,8 +68,8 @@ class MoveItSolver():
         """
         if joint_angles is not None and len(joint_angles) == 7:
             joint_angles = np.concatenate(([0], joint_angles))
-        # else:
-        #     joint_angles = np.zeros(8)
+        else:
+            joint_angles = np.zeros(8)
         ee_out = self.solver.fk(joint_angles)
         xyz_ = ee_out[:3, 3]
         rot_ = ee_out[:3, :3]
@@ -85,8 +89,8 @@ if __name__ == "__main__":
     left_joints = left_arm.inverse_kinematics(left_pos, target_quaternion=left_quat, use_rotation_matrix=False)
     # 右臂：使用位置和方向（旋转矩阵方法）
     right_joints = right_arm.inverse_kinematics(right_pos, target_quaternion=right_quat, use_rotation_matrix=False)
-    print(left_joints)
-    print(right_joints)
+    print("left_joints", left_joints)
+    print("right_joints", right_joints)
 
     # 2. 正向运动学：计算末端位姿（位置和方向）
     left_pos, left_rot, left_quat = left_arm.forward_kinematics(left_joints)

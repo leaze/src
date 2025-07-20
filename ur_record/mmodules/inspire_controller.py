@@ -90,7 +90,7 @@ class InspireController:
         :return: 是否成功
         """
         # 打印调试信息
-        grip_left_hands_status, grip_right_hands_status = self.move_both_hands([0.2, 0.2, 0.2, 0.2, 0.1, 0.01], [0.2, 0.2, 0.2, 0.2, 0.1, 0.01])
+        grip_left_hands_status, grip_right_hands_status = self.move_both_hands([0.99, 0.99, 0.99, 0.99, 0.01, 0.01], [0.99, 0.99, 0.99, 0.99, 0.01, 0.01])
         rospy.sleep(1.5)
         rospy.loginfo("Both hands grip wedge successfully") if grip_left_hands_status and grip_right_hands_status else rospy.logerr("Both hands grip wedge failed")
         return grip_left_hands_status and grip_right_hands_status
