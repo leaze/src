@@ -22,6 +22,7 @@ class ArmTracIKSolver(TracIKSolver):
         self.lb, self.ub = self.joint_limits
         self.joint_mid = (self.lb + self.ub) / 2.0
         self.current_joints = [0.0] * self.number_of_joints
+        self.obstacle_detected = False
 
     def robust_ik(self, ee_pose, current_joints=None, max_attempts=20, tol=1e-3, singularity_threshold=0.1):
         """
@@ -253,6 +254,12 @@ class ArmTracIKSolver(TracIKSolver):
         num_points = int(distance / dist_)
         return self.interpolate_position(start_pos_, end_pos_, num_points)
 
+    def create_pose(self, xyz_: list, quat_wxyz: list):
+        ee_pose = np.eye(4)
+        ee_pose[:3, 3] = np.array(xyz_)
+        ee_pose[:3, :3] = self.quat_to_rot_matrix(quat_wxyz)
+        return ee_pose
+
     def forward_kinematics(self, joint_angles):
         """
         :param joint_angles: 7维关节角
@@ -365,20 +372,19 @@ class ArmTracIKSolver(TracIKSolver):
             return solution
         else:
             print("Damped solution verification failed.")
-            return solution
+            return current_joints
 
     def _adjust_pose(self, pose, translation):
         """创建调整后的位姿"""
         adj_pose = pose.copy()
         adj_pose[:3, 3] += np.array(translation)
         return adj_pose
-    
 
     def slerp_orientations(self, q1, q2, steps):
         """四元数球面线性插值"""
         t = np.linspace(0, 1, steps)
         orientations = []
-        
+
         for i in range(steps):
             dot = np.dot(q1, q2)
             dot = np.clip(dot, -1.0, 1.0)
@@ -401,15 +407,17 @@ class ArmTracIKSolver(TracIKSolver):
             orientations.append(result)
 
         return orientations
-    def plan(self, start_pose, end_pose, steps=10):
+
+    def plan(self, start_pose, end_pose, steps=10, is_random=False, direction=[1.0, 1.0, 1.0]):
         """
         生成起点到终点的非直线轨迹(三维B样条)
-        
+
         参数:
             start_pose: 起点位姿 (geometry_msgs/Pose)
             end_pose: 终点位姿 (geometry_msgs/Pose)
             steps: 路径点数量（包括起点终点）
-            
+            direction: 轨迹方向向量 (list of float)
+
         返回:
             path: 轨迹点位姿列表 (list of geometry_msgs/Pose)
         """
@@ -418,33 +426,31 @@ class ArmTracIKSolver(TracIKSolver):
         end_pos = end_pose[:3, 3]
         r_start = R.from_matrix(start_pose[:3, :3])
         r_end = R.from_matrix(end_pose[:3, :3])
-        # # 生成曲形控制点 (在起点终点之间添加偏移控制点)
-        # noise1 = np.random.uniform(-0.01, 0.01, 3)
-        # noise1[1] = 0.0  # 确保控制点在Y轴上
-        # noise2 = np.random.uniform(-0.01, 0.01, 3)
-        # noise2[1] = 0.0  # 确保控制点在Y轴上
-        # mid1 = start_pos + (end_pos - start_pos) * 0.3 + noise1
-        # mid2 = start_pos + (end_pos - start_pos) * 0.7 + noise2
+        if is_random:
+            # 生成曲形控制点 (在起点终点之间添加偏移控制点)
+            mid1 = start_pos + (end_pos - start_pos) * 0.3 + np.random.uniform(-0.01, 0.01, 3) * np.array(direction)  # 添加偏移控制点
+            mid2 = start_pos + (end_pos - start_pos) * 0.7 + np.random.uniform(-0.01, 0.01, 3) * np.array(direction)  # 添加偏移控制点
+        else:
+            # 指定特定偏移量（非随机）
+            mid1 = start_pos + (end_pos - start_pos) * 0.3 + np.array([0.02, -0.02, 0.02] * np.array(direction))  # 添加偏移控制点
+            mid2 = start_pos + (end_pos - start_pos) * 0.7 + np.array([0.02, -0.02, 0.02] * np.array(direction))  # 添加偏移控制点
 
-        # 指定特定偏移量（非随机）
-        mid1 = start_pos + (end_pos - start_pos) * 0.3 + np.array([0.02, -0.00, 0.02])  # y 轴偏移设为0
-        mid2 = start_pos + (end_pos - start_pos) * 0.7 + np.array([0.02, -0.00, 0.02])  # y 轴偏移设为0
-        
-        control_points = np.vstack([
-            start_pos,
-            mid1,
-            mid2,
-            end_pos
-        ])
-        
+        control_points = np.vstack([start_pos, mid1, mid2, end_pos])
+        # 避障扩展
+        if self.obstacle_detected:
+            bypass_point1 = mid1
+            bypass_point2 = mid2
+            control_points = np.vstack([start_pos, bypass_point1, bypass_point2, end_pos])
         # 参数化控制点
         t = [0, 0.3, 0.7, 1.0]
         spline = make_interp_spline(t, control_points, k=3)
-        
+
         # 生成平滑轨迹
         u = np.linspace(0, 1, steps)
         positions = spline(u)
-        
+
+
+
         # 姿态插值（四元数球面线性插值）
         start_quat = r_start.as_quat()
         end_quat = r_end.as_quat()
@@ -454,19 +460,17 @@ class ArmTracIKSolver(TracIKSolver):
         all_quats = []
         for i in range(steps):
             all_points.append(positions[i])
-            all_quats.append(orientations[i])
-            
-        return all_points, all_quats
-    
+            # all_quats.append(orientations[i])
+
+        return all_points
+
     def visualize_trajectory(self, positions: np.array):
         """可视化笛卡尔空间轨迹"""
         fig = plt.figure(figsize=(10, 8))
         ax = fig.add_subplot(111, projection="3d")
 
         # 绘制轨迹
-        ax.plot(
-            positions[:, 0], positions[:, 1], positions[:, 2], "bo-", linewidth=1, markersize=3, alpha=0.7, label="End-effector Path"
-        )
+        ax.plot(positions[:, 0], positions[:, 1], positions[:, 2], "bo-", linewidth=1, markersize=3, alpha=0.7, label="End-effector Path")
 
         # 添加起点和终点标记
         ax.scatter(positions[0, 0], positions[0, 1], positions[0, 2], c="green", s=100, marker="o", edgecolors="k", label="Start")
@@ -500,6 +504,7 @@ class ArmTracIKSolver(TracIKSolver):
         plt.savefig("./data/vis/trajectory_visualization.png", dpi=300)
         plt.show()
 
+
 if __name__ == "__main__":
     arm_left_kinematics = ArmTracIKSolver("./ur_record/urdf/robot.urdf", "pelvis", "wrist_roll_l_link")
     arm_right_kinematics = ArmTracIKSolver("./ur_record/urdf/robot.urdf", "pelvis", "wrist_roll_r_link")
@@ -517,15 +522,11 @@ if __name__ == "__main__":
     print("left_joints = ", list(left_joints))
     print("right_joints = ", list(right_joints))
     # 轨迹规划
-    start_pose = np.eye(4)
-    start_pose[:3, 3] = np.array(left_pos)
+    start_pose = arm_left_kinematics.create_pose(left_pos, left_quat)
     start_pose[:3, :3] = arm_left_kinematics.quat_to_rot_matrix(left_quat)
 
-    end_pose = np.eye(4)
-    end_pose[:3, 3] = np.array(right_pos)
-    end_pose[:3, :3] = arm_right_kinematics.quat_to_rot_matrix(right_quat)
-    points, quats = arm_left_kinematics.plan(start_pose, end_pose, 20)
+    end_pose = arm_left_kinematics.create_pose(right_pos, right_quat)
+    points = arm_left_kinematics.plan(start_pose, end_pose, 20, True, [1.0, 0.0, 1.0])
 
     # 轨迹可视化
     arm_left_kinematics.visualize_trajectory(np.array(points))
-
