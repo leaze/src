@@ -342,10 +342,10 @@ rosrun rqt_robot_steering rqt_robot_steering
 
 ### ROS消息包
 
-![standard message](./images/std_msgs.png)
-![common message](./images/common_msgs.png)
-![geometry message](./images/geometry_msgs.png)
-![sensor message](./images/sensor_msgs.png)
+![standard message](./data/img/std_msgs.png)
+![common message](./data/img/common_msgs.png)
+![geometry message](./data/img/geometry_msgs.png)
+![sensor message](./data/img/sensor_msgs.png)
 
 #### 生成自定义消息包
 

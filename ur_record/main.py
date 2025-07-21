@@ -96,23 +96,37 @@ class RobotController:
         return insert_wedge_success
 
     def grab_box(self):
-        # 抓取纸箱
-        # 1 释放楔子
-        release_wedge_status = self.hand_controller.release_wedge()
+        # 0 定位纸箱
+        left_position, right_position = [-0.15, 0.30, 0.0, -1.0, 0.0, 0.0, -0.0], [-0.15, -0.30, 0.0, -1.0, -0.0, 0.0, 0.0]
+        grab_step1_success = self.arm_controller.rotate_dual_joint(left_position, right_position)
+        # 1 抓取纸箱
+        left_position = [-0.8237481117248535, 0.56422786712646484, -0.23824644088745117, -0.0004076957702636719, 1.4139466285705566, 0.844813346862793, -0.0]
+        right_position = [-0.8237481117248535, -0.56422786712646484, 0.23824644088745117, -0.0004076957702636719, -1.4139466285705566, 0.844813346862793, 0.0]
+        grab_step2_success = self.arm_controller.rotate_dual_joint(left_position, right_position)
         # 2 移动
-        move_left_status = self.arm_controller.rotate_joint([0.0, -0.1, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0])
+        left_position = [-0.8031110763549805, 0.50185794830322266, -0.5942502021789551, -0.17487382888793945, 1.866687297821045, 0.837101936340332, -0.6051468849182129]
+        right_position = [-0.8031110763549805, -0.50185794830322266, 0.5942502021789551, -0.17487382888793945, -1.866687297821045, 0.837101936340332, 0.6051468849182129]
+        grab_step3_success = self.arm_controller.rotate_dual_joint(left_position, right_position)
+
+        left_position = [-0.8031110763549805, 0.35185794830322266, -0.5942502021789551, -0.17487382888793945, 1.866687297821045, 0.837101936340332, -0.6051468849182129]
+        right_position = [-0.8031110763549805, -0.35185794830322266, 0.5942502021789551, -0.17487382888793945, -1.866687297821045, 0.837101936340332, 0.6051468849182129]
+        grab_step3_success = self.arm_controller.rotate_dual_joint(left_position, right_position)
+        self.hand_controller.grip_box()
+        move_left_status = self.arm_controller.rotate_joint([-0.3, 0.0, 0.0, -0.1, 0.0, 0.0, 0.0], [-0.3, -0.0, 0.0, -0.1, 0.0, 0.0, 0.0])
+        # rospy.sleep(5)
+        # move_left_status = self.arm_controller.rotate_joint([0.0, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, -0.3, 0.0, 0.0, 0.0, 0.0, 0.0])
         # 3 移动到抓取点
         # 3.1 左手移动到纸箱抓取点
-        left_target_pos_ = [0.12371069, 0.21492773, -0.06846677]
-        left_target_quat_ = [0.6457788789185539, -0.5312803574078042, -0.37486812155046495, 0.40023082442580193]
-        # 3.2 右手移动到纸箱抓取点
-        right_target_pos_ = [0.12371069, -0.21492773, -0.06846677]
-        right_target_quat_ = [0.645778878918554, 0.5312803574078042, -0.37486812155046495, -0.40023082442580193]
+        # left_target_pos_ = [0.39141683594642823, 0.3778243668227988, 0.12342496856493235]
+        # left_target_quat_ = [0.6733941594331715, -0.5827220661212154, -0.24117596996335405, 0.3857582808041192]
+        # # 3.2 右手移动到纸箱抓取点
+        # right_target_pos_ = [0.39141683594642823, -0.3778243668227988, 0.12342496856493235]
+        # right_target_quat_ = [0.6733941594331715, 0.5827220661212154, -0.24117596996335405, -0.3857582808041192]
+        # self.arm_controller.move_dual_arm_by_xyz_tr(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
         # 3.3 发送消息
-        move_to_box_success = self.arm_controller.move_dual_arm_by_xyz(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
+        # move_to_box_success = self.arm_controller.move_dual_arm_by_xyz(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
         # 4 抓取箱子
-        grab_left_box_status, grab_right_box_status = self.hand_controller.grip_box()
-        return release_wedge_status and move_left_status and move_to_box_success and grab_left_box_status and grab_right_box_status
+        # grab_box_status = self.hand_controller.grip_box()
 
     def move_box(self):
         # 移动纸箱的逻辑
@@ -145,17 +159,19 @@ class RobotController:
         # 抓取楔子
         self.grab_wedge()
         # 抬起楔子
-        self.lift_wedge()
+        # self.lift_wedge()
         # 移动到纸箱前
-        self.move_wedge()
+        # self.move_wedge()
         # 插入楔子
-        self.insert_wedge()
+        # self.insert_wedge()
 
 if __name__ == "__main__":
     rospy.init_node("RobotControllerNode")
     robot_controller = RobotController()
     # robot_controller.get_arm_state()
+    # move_left_status = robot_controller.arm_controller.rotate_joint([-0.0, 0.00, 0.0, 0.0, 0.0, 0.0, 0.0], [-0.0, -0.00, 0.0, 0.0, 0.0, 0.0, 0.0])
+    move_left_status = robot_controller.arm_controller.rotate_joint([-0.0, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0], [-0.0, -0.3, 0.0, 0.0, 0.0, 0.0, 0.0])
     hand_init_success = robot_controller.hand_controller.init_hand_status()
     arm_init_success = robot_controller.arm_controller.init_arm_status()
-    robot_controller.test()
+    robot_controller.grab_box()
     print("Service test end")

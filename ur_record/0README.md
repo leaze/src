@@ -201,7 +201,11 @@ planning_scene.add_object(collision_object)
 +---------------+    +-----------------+    +---------------+
 ```
 
-## 6 任务计划
+## 6 IK实现思路
+
+![ik_solver](../data/img/ik_solver.png)
+
+## 7 任务计划
 
 + [x] 1 两只机械手抓取物料
   + [x] 1.1 控制双臂移动到指定位置: 阅读dual_arm_demo源码

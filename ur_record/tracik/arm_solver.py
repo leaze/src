@@ -24,7 +24,7 @@ class ArmTracIKSolver(TracIKSolver):
         self.current_joints = [0.0] * self.number_of_joints
         self.obstacle_detected = False
 
-    def robust_ik(self, ee_pose, current_joints=None, max_attempts=20, tol=1e-3, singularity_threshold=0.1):
+    def robust_ik(self, ee_pose, current_joints=None, max_attempts=20, tol=1e-3, singularity_threshold=0.001):
         """
         鲁棒的逆运动学求解，确保解在物理限位内、接近当前位置且远离奇异值
 
@@ -77,7 +77,7 @@ class ArmTracIKSolver(TracIKSolver):
             best_idx = np.argmax(singular_values)
             return valid_solutions[best_idx]
 
-        return self._select_best_solution(non_singular_solutions, current_joints)
+        return self._select_best_solution(non_singular_solutions, ee_pose, current_joints)
 
     def is_near_singularity(self, joints, threshold=0.1):
         """
@@ -91,16 +91,49 @@ class ArmTracIKSolver(TracIKSolver):
 
         jac = self._compute_jacobian(joints)
         if jac is None:
-            return False
+            return True
 
         _, s, _ = np.linalg.svd(jac)
         min_singular = np.min(s)
         return min_singular < threshold
 
-    def _compute_jacobian(self, joints, delta=1e-6):
+    # def is_near_singularity(self, joints, relative_threshold=0.05):
+    #     """
+    #     检测是否接近奇异位形
+    #     :param joints: 当前关节角
+    #     :param relative_threshold: 奇异值检测阈值（最小奇异值）
+    #     :return: 布尔值，表示是否接近奇异
+    #     """
+    #     if joints is None:
+    #         return False
+
+    #     jac = self._compute_jacobian(joints)
+    #     if jac is None: 
+    #         return True
+        
+    #     _, s, _ = np.linalg.svd(jac)
+        
+    #     # 改进1：条件数检测
+    #     condition_number = np.max(s) / np.min(s)
+    #     if condition_number > 1/(relative_threshold):
+    #         return True
+        
+    #     # 改进2：最小奇异值动态阈值
+    #     dynamic_threshold = max(relative_threshold, 0.01 * np.median(s))
+            
+    #     return np.min(s) < dynamic_threshold
+
+
+    def _compute_jacobian(self, joints, delta=1e-6, adaptive_delta=True):
         """数值计算雅可比矩阵"""
         if joints is None:
             return None
+        if adaptive_delta:
+            # 基于当前位置自动调整delta
+            current_pose = self.fk(joints)
+            pos_magnitude = np.linalg.norm(current_pose[:3,3])
+            rot_magnitude = R.from_matrix(current_pose[:3,:3]).magnitude()
+            delta = max(1e-6, min(0.01, 0.001 * pos_magnitude, 0.001 * rot_magnitude))
 
         jac = np.zeros((6, self.number_of_joints))
         current_pose = self.fk(joints)
@@ -125,6 +158,9 @@ class ArmTracIKSolver(TracIKSolver):
             r_current = R.from_matrix(current_pose[:3, :3])
             r_perturbed = R.from_matrix(perturbed_pose[:3, :3])
             rot_diff = (r_perturbed * r_current.inv()).as_rotvec() / delta
+            # 增加平滑处理
+            if np.linalg.norm(rot_diff) < 1e-8:
+                rot_diff = np.zeros(3)
 
             # 组合雅可比列
             jac[:, i] = np.hstack([pos_diff, rot_diff])
@@ -147,10 +183,25 @@ class ArmTracIKSolver(TracIKSolver):
 
         return True
 
-    def _select_best_solution(self, solutions, current_joints):
-        """选择最优解：最接近当前位置或中间位置"""
-        reference = current_joints if current_joints is not None else self.joint_mid
-        return min(solutions, key=lambda sol: np.linalg.norm(sol - reference))
+    # def _select_best_solution(self, solutions, current_joints):
+    #     """选择最优解：最接近当前位置或中间位置"""
+    #     reference = current_joints if current_joints is not None else self.joint_mid
+    #     return min(solutions, key=lambda sol: np.linalg.norm(sol - reference))
+    
+    def _select_best_solution(self, solutions, target_pose, current_joints):
+        """综合关节空间距离和操作空间误差"""
+        scores = []
+        for sol in solutions:
+            # 关节空间距离（标准化）
+            joint_dist = np.linalg.norm(sol - current_joints) / len(sol)
+            
+            # 操作空间误差（标准化）
+            _, pos_err, rot_err = self.verify_pose(sol, target_pose)
+            task_err = pos_err * 0.7 + rot_err * 0.3  # 加权误差
+            
+            # 综合评分（越小越好）
+            scores.append(0.6 * joint_dist + 0.4 * task_err)
+        return solutions[np.argmin(scores)]
 
     def verify_pose(self, joints, target_pose, pos_tol=0.01, rot_tol=0.1):
         """
@@ -286,7 +337,7 @@ class ArmTracIKSolver(TracIKSolver):
         solution = self.move_to_pose(ee_pose, 20, 0.01)
         return solution[1:] if solution is not None else initial_angles
 
-    def move_to_pose(self, target_pose, max_attempts=10, singularity_threshold=0.01):
+    def move_to_pose(self, target_pose, max_attempts=10, singularity_threshold=0.001):
         """
         移动到目标位姿
 
@@ -316,17 +367,17 @@ class ArmTracIKSolver(TracIKSolver):
             return self.avoid_singularity(target_pose, solution, singularity_threshold)
         return solution
 
-    def avoid_singularity(self, target_pose, current_joints, singularity_threshold=0.1):
+    def avoid_singularity(self, target_pose, current_joints, singularity_threshold=0.001):
         """奇异规避策略"""
         # 策略1：小幅调整目标位置
         print("Trying to adjust target pose...")
         adjustments = [
-            lambda p: self._adjust_pose(p, [0, 0, 0.02]),  # Z+
-            lambda p: self._adjust_pose(p, [0, 0, -0.02]),  # Z-
-            lambda p: self._adjust_pose(p, [0.02, 0, 0]),  # X+
-            lambda p: self._adjust_pose(p, [-0.02, 0, 0]),  # X-
-            lambda p: self._adjust_pose(p, [0, 0.02, 0]),  # Y+
-            lambda p: self._adjust_pose(p, [0, -0.02, 0]),  # Y-
+            lambda p: self._adjust_pose(p, [0, 0, 0.05]),  # Z+
+            lambda p: self._adjust_pose(p, [0, 0, -0.05]),  # Z-
+            lambda p: self._adjust_pose(p, [0.05, 0, 0]),  # X+
+            lambda p: self._adjust_pose(p, [-0.05, 0, 0]),  # X-
+            lambda p: self._adjust_pose(p, [0, 0.05, 0]),  # Y+
+            lambda p: self._adjust_pose(p, [0, -0.05, 0]),  # Y-
         ]
 
         # 尝试不同调整
@@ -344,7 +395,7 @@ class ArmTracIKSolver(TracIKSolver):
         # 策略2：小幅调整目标方向
         print("Trying orientation adjustment...")
         r_target = R.from_matrix(target_pose[:3, :3])
-        for angle in [0.1, -0.1, 0.2, -0.2]:  # 小角度调整
+        for angle in [0.2, -0.2, 0.3, -0.3]:  # 小角度调整
             r_adjusted = r_target * R.from_euler("z", angle)
             adjusted_pose = target_pose.copy()
             adjusted_pose[:3, :3] = r_adjusted.as_matrix()
@@ -360,7 +411,7 @@ class ArmTracIKSolver(TracIKSolver):
 
         # 策略3：使用阻尼最小二乘法（伪逆）处理奇异点
         print("Using damped least squares approach for singularity handling.")
-        solution = self.damped_least_squares_ik(target_pose, current_joints, lambda_val=0.2)  # 值越大越稳定但精度越低
+        solution = self.damped_least_squares_ik(target_pose, current_joints, lambda_val=0.01)  # 值越大越稳定但精度越低
 
         if solution is None:
             print("Damped least squares failed!")
@@ -516,11 +567,11 @@ if __name__ == "__main__":
     right_pos = [0.32759669516187234, -0.1967146327303412, -0.07190695670671113]
     right_quat = [0.6549775332099196, 0.5350869754628191, -0.36644696956112155, -0.38781822827166285]
     init_right_joints = [-0.3220635774799992, 0.5284204253037288, -0.7083235187481794, -1.3571484416405197, -0.6327007667341071, 0.9092477393532518, 0.2705114985181885]
-    # while True:
-    left_joints = arm_left_kinematics.inverse_kinematics(left_pos, left_quat, init_left_joints)
-    right_joints = arm_right_kinematics.inverse_kinematics(right_pos, right_quat, init_right_joints)
-    print("left_joints = ", list(left_joints))
-    print("right_joints = ", list(right_joints))
+    while True:
+        left_joints = arm_left_kinematics.inverse_kinematics(left_pos, left_quat, init_left_joints)
+        right_joints = arm_right_kinematics.inverse_kinematics(right_pos, right_quat, init_right_joints)
+        print("left_joints = ", list(left_joints))
+        print("right_joints = ", list(right_joints))
     # 轨迹规划
     start_pose = arm_left_kinematics.create_pose(left_pos, left_quat)
     start_pose[:3, :3] = arm_left_kinematics.quat_to_rot_matrix(left_quat)

@@ -39,10 +39,10 @@ class ArmController:
         self.mirror_ls = [1, -1, -1, 1, -1, 1, -1]
 
         # 控制器参数
-        self.joint_speed = rospy.get_param("~joint_speed", 1)  # rpm
-        self.joint_current = rospy.get_param("~joint_current", 5.0)  # A
+        self.joint_speed = rospy.get_param("~joint_speed", 150)  # rpm
+        self.joint_current = rospy.get_param("~joint_current", 80.0)  # A
         self.joint_tolerance = rospy.get_param("~joint_tolerance", 0.01)  # rad
-        self.tr_distance = rospy.get_param("~tr_distance", 0.02)  # m
+        self.tr_distance = rospy.get_param("~tr_distance", 0.05)  # m
         self.tr_point_time = rospy.get_param("~tr_point_time", min(0.2, 2 * math.pi / self.joint_speed))  # s
         # 线程同步工具
         self.lock = threading.Lock()
@@ -393,7 +393,7 @@ class ArmController:
             left_arm_move_status, right_arm_move_status = left_true_error2_ < self.joint_tolerance, right_true_error2_ < self.joint_tolerance
             rospy.loginfo("Arm Move Success") if left_arm_move_status and right_arm_move_status else rospy.loginfo("Arm Move Failed")
             rospy.logerr(f"left_true_error2_ = {left_true_error2_}, right_true_error2_ = {right_true_error2_}")
-            return left_true_error2_ < self.joint_tolerance and right_true_error2_ < self.joint_tolerance
+        return left_true_error2_ < self.joint_tolerance and right_true_error2_ < self.joint_tolerance
 
     def move_single_forward(self, is_left: bool, distance: float) -> bool:
         """移动单只臂"""
