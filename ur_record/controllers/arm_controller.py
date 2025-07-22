@@ -36,7 +36,6 @@ class ArmController:
         self.arm_right_kinematics = ArmTracIKSolver("./ur_record/urdf/robot.urdf", "pelvis", "wrist_roll_r_link")
         self.arm_kinematics = [self.arm_right_kinematics, self.arm_left_kinematics]
         self.mirror_ls = [1, -1, -1, 1, -1, 1, -1]
-
         # 控制器参数
         self.joint_speed = rospy.get_param("~joint_speed", 150)  # rpm
         self.joint_current = rospy.get_param("~joint_current", 80.0)  # A
@@ -55,25 +54,10 @@ class ArmController:
         self.left_end_effector_pose, self.right_end_effector_rota, self.left_end_effector_quat = self.arm_left_kinematics.forward_kinematics(self.left_joint_positions)
         self.right_end_effector_pose, self.right_end_effector_rota, self.right_end_effector_quat = self.arm_right_kinematics.forward_kinematics(self.right_joint_positions)
         self.joint_names = {True: [i for i in range(11, 18)], False: [j for j in range(21, 28)]}
-
-        # 轨迹规划参数
-        self.left_start_pose = None
-        self.left_target_pose = None
-        self.right_start_pose = None
-        self.right_target_pose = None
-        self.use_coordinated_motion = False
-
-        # # 设置订阅者
+        # 设置订阅者
         rospy.Subscriber("/arm/status", MotorStatusMsg, self.arm_status_callback)
-        # rospy.Subscriber('/joint_states', JointState, self.joint_states_callback)
-        # rospy.Subscriber('/right_arm/target_pose', PoseStamped, self.right_target_callback)
-        # rospy.Subscriber('/dual_arm/target_poses', PoseArray, self.coordinated_target_callback)
-
         # 设置发布者
-        self.left_tra_pub = rospy.Publisher("/left_arm/joint_trajectory", JointTrajectory, queue_size=1)
-        self.right_tra_pub = rospy.Publisher("/right_arm/joint_trajectory", JointTrajectory, queue_size=1)
         self.arm_cmd_pos_pub = rospy.Publisher("/arm/cmd_pos", CmdSetMotorPosition, queue_size=10)
-
         # 初始化关节状态
         # self.init_arm_status()
         rospy.sleep(0.1)
@@ -267,8 +251,6 @@ class ArmController:
         # 跟踪前一步关节角度
         prev_joints = self.dual_joint_positions[is_left]
         for i, pos in enumerate(positions):
-            # print(f"Position: {np.array_str(pos, precision=4, suppress_small=True)}")
-            # print(f"Quaternion: {np.array_str(quat, precision=4, suppress_small=True)}")
             # 使用上一步的解作为初始值
             joint_angles_ = self.arm_kinematics[is_left].inverse_kinematics(
                 pos,
@@ -281,10 +263,6 @@ class ArmController:
             # 正向运动学验证
             calc_pos_, calc_rot, calc_quat_ = self.arm_kinematics[is_left].forward_kinematics(joint_angles_)
             all_positions.append(calc_pos_)
-            # print(f"FK Position xyz: {np.array_str(calc_pos_, precision=4, suppress_small=True)}")
-            # print(f"FK Quaternion wxyz: {np.array_str(calc_quat_, precision=4, suppress_small=True)}")
-            # print("Joint Angles (rad):", np.array(joint_angles_).round(2))
-            # print("Joint Angles (deg):", np.rad2deg(joint_angles_).round(2))
         return joint_trajectory, all_positions
 
     def move_along_direction(self, position, quaternion, direction_vector, distance=0.05):
@@ -300,22 +278,16 @@ class ArmController:
         position = np.array(position)
         quaternion = np.array(quaternion)
         direction_vector = np.array(direction_vector)
-        
         # 转换为scipy支持的四元数顺序(x, y, z, w)
         quat_xyzw = [quaternion[1], quaternion[2], quaternion[3], quaternion[0]]
-        
         # 生成旋转对象
         rotation = R.from_quat(quat_xyzw)
-        
         # 转换局部方向向量到全局
         global_direction = rotation.apply(direction_vector)
-        
         # 计算偏移
         displacement = distance * global_direction
-        
         # 计算新位置
         new_position = position + displacement
-        
         return new_position
 
     def move_single_arm_tr(self, is_left, target_pos, target_quat):
@@ -574,25 +546,8 @@ class ArmController:
         rospy.loginfo(f"Arm Initialization Status: {dual_joint_error_ < self.joint_tolerance}, dual joint error: {dual_joint_error_:.4f}")
         return dual_joint_error_ < self.joint_tolerance
 
-    def control_loop(self):
-        left_target_pos_ = [0.28298403, 0.24302717, 0.06437022]
-        left_target_quat_ = [0.706715, 0.03085568, -0.70615245, -0.03083112]
-        right_target_pos_ = [0.28298403, -0.18722009, 0.05216848]
-        right_target_quat_ = [0.706715, 0.03085568, -0.70615245, -0.03083112]
-        success_left, success_right = self.move_dual_arm_by_xyz(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
-        return success_left and success_right
-    
-    def run(self):
-        """启动控制器"""
-        try:
-            rospy.loginfo("Starting dual arm control loop")
-            self.control_loop()
-        except rospy.ROSInterruptException:
-            rospy.logerr("Dual arm controller interrupted")
-
 
 if __name__ == "__main__":
     rospy.init_node("ArmController")
     controller = ArmController()
-    controller.run()
     rospy.spin()
