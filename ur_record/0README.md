@@ -203,7 +203,13 @@ planning_scene.add_object(collision_object)
 
 ## 6 IK实现思路
 
+### arm_solver逆解算
+
 ![ik_solver](../data/img/ik_solver.png)
+
+### arm_solver_que逆解算
+
+![ik_solver_que](../data/img/ik_solver_que.png)
 
 ## 7 任务计划
 
@@ -227,5 +233,7 @@ planning_scene.add_object(collision_object)
   + [ ] 3.1 导航到指定位置 nav_rosbridge类的接口
 + [ ] 4 正逆解算优化
   + [ ] 4.1 避障 <https://yuanbao.tencent.com/chat/naQivTmsDa/1a29c449-7aec-4e23-92cc-ce8b33a20d01>
-  + [ ] 4.2 奇异值优化 <https://chat.deepseek.com/a/chat/s/5d8960b1-2550-4fb1-b334-e9b5f464230c>
-  + [ ] 4.3 双臂协同轨迹优化 <https://yuanbao.tencent.com/chat/naQivTmsDa/faaa8bd6-973b-4648-a58a-5d403b7bbe15>
+  + [x] 4.2 奇异值优化 <https://chat.deepseek.com/a/chat/s/5d8960b1-2550-4fb1-b334-e9b5f464230c>
+  + [x] 4.3 双臂协同轨迹优化 <https://yuanbao.tencent.com/chat/naQivTmsDa/faaa8bd6-973b-4648-a58a-5d403b7bbe15>
+  + [ ] 4.4 PID / LQR 位控
+  + [ ] 4.5 力控

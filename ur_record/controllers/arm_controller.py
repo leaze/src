@@ -11,8 +11,7 @@
 from bodyctrl_msgs.msg import CmdSetMotorPosition, SetMotorPosition, MotorStatusMsg, MotorStatus
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from geometry_msgs.msg import PoseStamped, PoseArray, Twist
-from coordinated.coordinated_solver import StrictCoordinatedRobotIKSolver
-from controllers.dual_arm_solver import ArmKinematics
+from solver.dual.dual_arm_solver import ArmKinematics
 from moveit.moveit_solver import MoveItSolver
 # from controllers.arms_solver import RobotIKSolver
 from std_srvs.srv import Trigger, TriggerResponse
@@ -25,7 +24,7 @@ import threading
 import rospy
 import math
 import time
-from tracik.arm_solver import ArmTracIKSolver
+from solver.tracik.arm_solver_que import ArmTracIKSolver
 
 
 class ArmController:
