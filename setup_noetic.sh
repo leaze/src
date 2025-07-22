@@ -21,6 +21,11 @@ sudo apt install -y ros-noetic-controller-manager
 sudo apt install -y ros-noetic-hector-mapping
 sudo apt install -y ros-noetic-gmapping
 sudo apt install -y ros-noetic-ddynamic-reconfigure
+sudo apt install -y ros-noetic-fcl
+# pip install
+pip3 install transforms3d -i https://pypi.tuna.tsinghua.edu.cn/simple
+pip3 install transformations -i https://pypi.tuna.tsinghua.edu.cn/simple
+pip3 install numpy-quaternion -i https://pypi.tuna.tsinghua.edu.cn/simple
 # wpb_home/wpb_home_bringup
 sudo apt install ros-noetic-teb-local-planner -y
 sudo apt-get install ros-noetic-joint-state-publisher-gui -y

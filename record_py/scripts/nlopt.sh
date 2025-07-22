@@ -5,3 +5,4 @@ cd build
 cmake -DCMAKE_INSTALL_PREFIX=/usr ..
 make -j16
 sudo make install
+python3 setup.py install

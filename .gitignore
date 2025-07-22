@@ -6,5 +6,6 @@ Livox-SDK2/
 perception/livox_ros_driver2/
 *.STL
 *.stl
+*.obj
 __pycache__/
 
