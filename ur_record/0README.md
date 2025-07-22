@@ -210,6 +210,7 @@ planning_scene.add_object(collision_object)
 ### arm_solver_que逆解算
 
 ![ik_solver_que](../data/img/ik_solver_que.png)
+![my_solver2](../data/img/my_solver2.png)
 
 ## 7 任务计划
 
