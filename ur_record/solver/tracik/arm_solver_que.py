@@ -13,6 +13,7 @@ from scipy.interpolate import make_interp_spline
 from mpl_toolkits.mplot3d import Axes3D
 from tracikpy import TracIKSolver
 import matplotlib.pyplot as plt
+import transforms3d as tf3d
 import numpy as np
 
 
@@ -441,14 +442,15 @@ class ArmTracIKSolver(TracIKSolver):
         ee_out = self.fk(joint_angles)
         xyz_ = ee_out[:3, 3]
         rot_ = ee_out[:3, :3]
-        quat_ = self.mat2quat_tf(rot_)
+        # quat_ = self.mat2quat_tf(rot_)
+        quat_ = tf3d.quaternions.mat2quat(rot_)
         return xyz_, rot_, quat_
 
     def inverse_kinematics(self, target_position, target_quaternion=None, initial_angles=None, orientation_weight=1.0, use_rotation_matrix=False):
         ee_pose = np.eye(4)
         ee_pose[:3, 3] = np.array(target_position)
         if target_quaternion is None:
-            cuurent_xyz_, current_rot_, target_quaternion = self.forward_kinematics(target_position)
+            cuurent_xyz_, current_rot_, target_quaternion = self.forward_kinematics(initial_angles)
             ee_pose[:3, :3] = self.quat_to_rot_matrix(target_quaternion)
         else:
             ee_pose[:3, :3] = self.quat_to_rot_matrix(target_quaternion)
@@ -490,13 +492,33 @@ class ArmTracIKSolver(TracIKSolver):
             return self.avoid_singularity(target_pose, solution, singularity_threshold)
         return solution
 
+    def correct_for_original_target(self, solution, original_target, adjusted_pose):
+        """将调整后的解修正回原始目标位姿"""
+        # 1. 计算当前解在调整后位姿下的实际末端位置
+        current_pos = self.fk(solution)[:3, 3]
+        
+        # 2. 计算调整偏移量
+        adjustment_vector = adjusted_pose[:3, 3] - original_target[:3, 3]
+        
+        # 3. 计算反向补偿向量
+        reverse_adjustment = -adjustment_vector
+        
+        # 4. 应用补偿（仅位置补偿，保持方向不变）
+        corrected_target = np.eye(4)
+        corrected_target[:3, :3] = original_target[:3, :3]
+        corrected_target[:3, 3] = current_pos + reverse_adjustment
+        
+        # 5. 重新求解
+        return self.robust_ik(corrected_target, solution, max_attempts=3)
+
     def avoid_singularity(self, target_pose, current_joints, singularity_threshold=0.001):
+        original_target = target_pose.copy()  # 保存原始目标位姿
         """奇异规避策略"""
         # 策略1：小幅调整目标位置
         print("Trying to adjust target pose...")
         adjustments = [
-            lambda p: self._adjust_pose(p, [0, 0, 0.05]),  # Z+
-            lambda p: self._adjust_pose(p, [0, 0, -0.05]),  # Z-
+            lambda p: self._adjust_pose(p, [0, 0, 0.02]),  # Z+
+            lambda p: self._adjust_pose(p, [0, 0, -0.02]),  # Z-
             lambda p: self._adjust_pose(p, [0.05, 0, 0]),  # X+
             lambda p: self._adjust_pose(p, [-0.05, 0, 0]),  # X-
             lambda p: self._adjust_pose(p, [0, 0.05, 0]),  # Y+
@@ -510,6 +532,12 @@ class ArmTracIKSolver(TracIKSolver):
 
             if solution is not None and not self.is_near_singularity(solution, singularity_threshold):
                 print("Singularity avoided with position adjustment.")
+                # ===== 新增修正步骤 =====
+                # 尝试将解修正回原始目标
+                corrected_solution = self.correct_for_original_target(solution, original_target, adjusted_pose)
+                if corrected_solution is not None:
+                    return corrected_solution
+                # ======================
                 # 验证并执行
                 valid, pos_err, rot_err = self.verify_pose(solution, adjusted_pose)
                 if valid:

@@ -4,7 +4,7 @@ import numpy as np
 import time
 
 # 1. 加载模型
-model_path = "description/franka_emika_panda/scene.xml"
+model_path = "./mujoco/model/franka_emika_panda/scene.xml"
 model = mujoco.MjModel.from_xml_path(model_path)
 data = mujoco.MjData(model)
 

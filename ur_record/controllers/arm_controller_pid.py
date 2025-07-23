@@ -25,6 +25,7 @@ import rospy
 import math
 import time
 from solver.tracik.arm_solver_que import ArmTracIKSolver
+from solver.mix.my_solver import MySolver
 from controllers.pid_controller import PIDController as PID
 
 
@@ -59,8 +60,8 @@ class ArmController:
         self.pid_kp = rospy.get_param("~pid_kp", 0.5)
         self.pid_ki = rospy.get_param("~pid_ki", 0.01)
         self.pid_kd = rospy.get_param("~pid_kd", 0.1)
-        self.pid_min_output = -1.0  # 最小输出限制
-        self.pid_max_output = 1.0   # 最大输出限制
+        self.pid_min_output = rospy.get_param("~pid_min_output", 0.0)  # 最小输出限制
+        self.pid_max_output = rospy.get_param("~pid_max_output", self.joint_current)   # 最大输出限制
         # 为每个关节创建PID控制器 (14个关节)
         self.pid_controllers = {}
         joint_ids = self.joint_names[True] + self.joint_names[False]
@@ -69,8 +70,8 @@ class ArmController:
                 kp=self.pid_kp,
                 ki=self.pid_ki,
                 kd=self.pid_kd,
-                integral_limit=self.pid_min_output,
-                output_limit=self.pid_max_output
+                min=self.pid_min_output,
+                max=self.pid_max_output
             )
         
         # 控制频率 (Hz)
@@ -162,7 +163,7 @@ class ArmController:
                     name=jid,
                     pos=target_info['position'],  # 目标位置
                     spd=target_info['speed'],     # 最大速度限制
-                    cur=control_current            # PID调整后的电流
+                    cur=control_current           # PID调整后的电流
                 )
                 cmd_msgs_.cmds.append(cmd)
                 

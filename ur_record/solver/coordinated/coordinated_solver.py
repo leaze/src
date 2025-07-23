@@ -174,7 +174,7 @@ class StrictCoordinatedRobotIKSolver(TracIKSolver):
         ee_pose = np.eye(4)
         ee_pose[:3, 3] = np.array(target_position)
         if target_quaternion is None:
-            cuurent_xyz_, current_rot_, target_quaternion = self.forward_kinematics(target_position)
+            cuurent_xyz_, current_rot_, target_quaternion = self.forward_kinematics(initial_angles)
             ee_pose[:3, :3] = self.quat_to_rot_matrix(target_quaternion)
         else:
             ee_pose[:3, :3] = self.quat_to_rot_matrix(target_quaternion)

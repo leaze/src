@@ -25,6 +25,8 @@ import rospy
 import math
 import time
 from solver.tracik.arm_solver_que import ArmTracIKSolver
+from solver.mix.my_solver import MySolver
+from controllers.pid_controller import PIDController as PID
 
 
 class ArmController:
@@ -54,6 +56,35 @@ class ArmController:
         self.left_end_effector_pose, self.right_end_effector_rota, self.left_end_effector_quat = self.arm_left_kinematics.forward_kinematics(self.left_joint_positions)
         self.right_end_effector_pose, self.right_end_effector_rota, self.right_end_effector_quat = self.arm_right_kinematics.forward_kinematics(self.right_joint_positions)
         self.joint_names = {True: [i for i in range(11, 18)], False: [j for j in range(21, 28)]}
+        # PID控制器参数 (需根据实际系统调整)
+        self.pid_kp = rospy.get_param("~pid_kp", 0.5)
+        self.pid_ki = rospy.get_param("~pid_ki", 0.01)
+        self.pid_kd = rospy.get_param("~pid_kd", 0.1)
+        self.pid_min_output = rospy.get_param("~pid_min_output", 0.0)  # 最小输出限制
+        self.pid_max_output = rospy.get_param("~pid_max_output", self.joint_current)   # 最大输出限制
+        # 为每个关节创建PID控制器 (14个关节)
+        self.pid_controllers = {}
+        joint_ids = self.joint_names[True] + self.joint_names[False]
+        for jid in joint_ids:
+            self.pid_controllers[jid] = PID(
+                kp=self.pid_kp,
+                ki=self.pid_ki,
+                kd=self.pid_kd,
+                min=self.pid_min_output,
+                max=self.pid_max_output
+            )
+        
+        # 控制频率 (Hz)
+        self.control_freq = rospy.get_param("~control_freq", 50.0)
+        self.control_period = rospy.Duration(1.0 / self.control_freq)
+        
+        # 创建控制定时器
+        self.control_timer = rospy.Timer(self.control_period, self.control_loop_callback)
+        
+        # PID控制器启用标志
+        self.pid_enabled = True
+        self.current_targets = {}  # {关节ID: 目标位置}
+        self.last_positions = {}   # 用于计算速度的上一位置
         # 设置订阅者
         rospy.Subscriber("/arm/status", MotorStatusMsg, self.arm_status_callback)
         # 设置发布者
@@ -61,6 +92,87 @@ class ArmController:
         # 初始化关节状态
         # self.init_arm_status()
         rospy.sleep(0.1)
+
+    def set_pid_enabled(self, enable: bool):
+        """启用/禁用PID控制器"""
+        self.pid_enabled = enable
+        if enable:
+            rospy.loginfo("PID control enabled")
+        else:
+            rospy.logwarn("PID control disabled")
+
+    def reset_pid_controllers(self):
+        """重置所有PID控制器状态"""
+        for pid in self.pid_controllers.values():
+            pid.reset()
+        rospy.loginfo("All PID controllers reset")
+
+    def control_loop_callback(self, event):
+        """PID控制循环定时器回调"""
+        if not self.pid_enabled or not self.current_targets:
+            return
+            
+        current_time = time.time()
+        
+        with self.lock:
+            cmd_msgs_ = CmdSetMotorPosition()
+            cmd_msgs_.header = Header(stamp=rospy.Time.now(), frame_id="")
+            
+            # 处理每个有目标位置的关节
+            for jid, target_info in self.current_targets.items():
+                # 获取当前关节位置
+                if jid not in self.left_joint_status["name"]:
+                    continue
+                    
+                idx = self.left_joint_status["name"].index(jid)
+                current_pos = self.left_joint_status["pos"][idx]
+                
+                # 获取PID控制器
+                pid = self.pid_controllers[jid]
+                
+                # 计算位置误差
+                error = target_info['position'] - current_pos
+                
+                # 计算PID输出 (控制作用)
+                try:
+                    # 尝试获取上一位置计算速度
+                    last_pos = self.last_positions.get(jid, current_pos)
+                    dt = 1.0 / self.control_freq
+                    velocity = (current_pos - last_pos) / dt
+                except:
+                    velocity = 0.0
+                    
+                control_output = pid.update(
+                    error, 
+                    derivative=velocity,  # 使用实际速度作为微分项
+                    current_time=current_time
+                )
+                
+                # 使用PID输出作为电流控制
+                # (实际实现需根据驱动器调整)
+                control_current = min(
+                    max(
+                        target_info['current'] * (1 + control_output),
+                        self.pid_min_output
+                    ),
+                    self.pid_max_output
+                )
+                
+                # 创建控制命令
+                cmd = SetMotorPosition(
+                    name=jid,
+                    pos=target_info['position'],  # 目标位置
+                    spd=target_info['speed'],     # 最大速度限制
+                    cur=control_current           # PID调整后的电流
+                )
+                cmd_msgs_.cmds.append(cmd)
+                
+                # 更新上一位置
+                self.last_positions[jid] = current_pos
+                
+            # 发布PID控制命令
+            if cmd_msgs_.cmds:
+                self.arm_cmd_pos_pub.publish(cmd_msgs_)
 
     def ik_dual(self, left_target_position, left_target_quaternion, left_initial_angles, right_target_position, right_target_quaternion, right_initial_angles):
         # 优先求解误差小的臂
@@ -80,6 +192,7 @@ class ArmController:
         return left_joints, right_joints
 
     def arm_status_callback(self, arm_status_msg: MotorStatusMsg):
+        # with self.lock:
         name_ls_, pos_ls_, speed_ls_, current_ls_, temperature_ls_, error_ls_, dual_joint_positions_ls_ = [], [], [], [], [], [], [0.0] * 14
         for arm_idx_ in range(14):
             name_ls_.append(arm_status_msg.status[arm_idx_].name)
@@ -127,14 +240,26 @@ class ArmController:
         if len(name_ls) != len(pos_ls) or len(name_ls) != len(spd_ls) or len(name_ls) != len(cur_ls):
             rospy.logerr("The length of name_ls, pos_ls, spd_ls, cur_ls must be equal.")
             return
-        # 创建命令消息
-        cmd_msgs_ = CmdSetMotorPosition()
-        cmd_msgs_.header = Header(stamp=rospy.Time.now(), frame_id="")
-        # 左臂：11---17, 右臂：21---27
-        for i in range(len(name_ls)):
-            cmd = SetMotorPosition(name=name_ls[i], pos=pos_ls[i], spd=spd_ls[i], cur=cur_ls[i])  # 名称 # 弧度  # RPM  # 安培
-            cmd_msgs_.cmds.append(cmd)
-        self.arm_cmd_pos_pub.publish(cmd_msgs_)
+        if not self.pid_enabled:
+            # 创建命令消息
+            cmd_msgs_ = CmdSetMotorPosition()
+            cmd_msgs_.header = Header(stamp=rospy.Time.now(), frame_id="")
+            # 左臂：11---17, 右臂：21---27
+            for i in range(len(name_ls)):
+                cmd = SetMotorPosition(name=name_ls[i], pos=pos_ls[i], spd=spd_ls[i], cur=cur_ls[i])  # 名称 # 弧度  # RPM  # 安培
+                cmd_msgs_.cmds.append(cmd)
+            self.arm_cmd_pos_pub.publish(cmd_msgs_)
+        else:
+            # PID控制模式：设置目标位置
+            with self.lock:
+                for i, name in enumerate(name_ls):
+                    self.current_targets[name] = {
+                        'position': pos_ls[i],
+                        'speed': spd_ls[i],
+                        'current': cur_ls[i]
+                    }
+                    # 重置该关节的PID控制器
+                    self.pid_controllers[name].reset()
 
     def send_arms_cmd_pos_service(self, name_ls: List[int], pos_ls: List[float], 
                                  spd_ls: List[float], cur_ls: List[float]) -> bool:
@@ -182,7 +307,10 @@ class ArmController:
         # 清除目标字典
         with self.lock:
             self.target_dict = {}
-        
+            for name in name_ls:
+                if name in self.current_targets:
+                    del self.current_targets[name]
+
         return success
 
     def rotate_single_joint(self, is_left: bool, joint_name: int, rotate_angle: float):
