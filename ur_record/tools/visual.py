@@ -1,3 +1,13 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# vim:fenc=utf-8
+'''
+@File    :   visual.py
+@Time    :   2025/07/23 15:33:58
+@Author  :   StarCheng
+@Version :   1.0
+@Site    :   https://star-cheng.github.io/Blog/
+'''
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import numpy as np

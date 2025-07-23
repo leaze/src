@@ -8,5 +8,5 @@
 
 ## Mujoco
 
-- [ ] Mujoco server 配合 Client
-- [ ] Moveit Mujoco 联合仿真
+- [ ] Mujoco Server 配合 Client
+- [ ] Mujoco Moveit 联合仿真
