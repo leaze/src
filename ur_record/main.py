@@ -75,13 +75,14 @@ class RobotController:
 
     def move_wedge(self):
         # 左手移动到纸箱前
-        left_target_pos_ = [0.10371069, 0.19029899, -0.01846677]
-        left_target_quat_ = [0.6457788789185539, -0.5312803574078042, -0.37486812155046495, 0.40023082442580193]
+        left_target_pos_ = [0.32497879, 0.19681914, -0.06855335]
+        left_target_quat_ = [0.65497752, -0.53508699, -0.36644699, 0.38781821]
         # 右手移动到纸箱前
-        right_target_pos_ = [0.10371069, -0.19029899, -0.01846677]
-        right_target_quat_ = [0.645778878918554, 0.5312803574078042, -0.37486812155046495, -0.40023082442580193]
+        right_target_pos_ = [0.32497879, -0.19681914, -0.06855335]
+        right_target_quat_ = [0.65497752, 0.53508699, -0.36644699, -0.38781821]
         # 发送消息
         move_wedge_success = self.arm_controller.move_dual_arm_by_xyz(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
+        self.arm_controller.move_dual_up(0.1)
         return move_wedge_success
 
     def insert_wedge(self):
@@ -170,7 +171,7 @@ if __name__ == "__main__":
     robot_controller = RobotController()
     # robot_controller.get_arm_state()
     # move_left_status = robot_controller.arm_controller.rotate_joint([-0.0, 0.00, 0.0, 0.0, 0.0, 0.0, 0.0], [-0.0, -0.00, 0.0, 0.0, 0.0, 0.0, 0.0])
-    move_left_status = robot_controller.arm_controller.rotate_joint([-0.0, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0], [-0.0, -0.3, 0.0, 0.0, 0.0, 0.0, 0.0])
+    move_left_status = robot_controller.arm_controller.rotate_joint([-0.0, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0], [-0.0, -0.1, 0.0, 0.0, 0.0, 0.0, 0.0])
     hand_init_success = robot_controller.hand_controller.init_hand_status()
     arm_init_success = robot_controller.arm_controller.init_arm_status()
     robot_controller.grab_box()

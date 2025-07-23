@@ -79,7 +79,7 @@ class TrajectoryPlanner:
             all_points.append(positions[i])
             all_quats.append(orientations[i])
 
-        return all_points, all_quats
+        return all_points, all_quats  # 返回路径点xyz, 四元数xyzw
     
     def quaternion_to_array(self, quat: Quaternion):
         return np.array([quat.x, quat.y, quat.z, quat.w])
@@ -116,20 +116,53 @@ class TrajectoryPlanner:
 
         return orientations
     
-    def visualize_trajectory(positions: np.array):
-        """可视化笛卡尔空间轨迹"""
+    def visualize_trajectory(positions: np.array, orientations = None, step: int = 5, scale: float = 0.05):
+        """
+        可视化笛卡尔空间轨迹，支持方向标注
+        参数:
+        positions - Nx3数组, 轨迹点的XYZ坐标
+        orientations - Nx4数组, 轨迹点的四元数(XYZW格式)，可选
+        step - 方向箭头的绘制间隔（每隔几个点绘制一个）
+        scale - 方向箭头的缩放比例
+        """
         fig = plt.figure(figsize=(10, 8))
         ax = fig.add_subplot(111, projection="3d")
 
         # 绘制轨迹
-        ax.plot(
-            positions[:, 0], positions[:, 1], positions[:, 2], "bo-", linewidth=1, markersize=3, alpha=0.7, label="End-effector Path"
-        )
+        ax.plot(positions[:, 0], positions[:, 1], positions[:, 2], "bo-", linewidth=1, markersize=3, alpha=0.7, label="End-effector Path")
 
         # 添加起点和终点标记
         ax.scatter(positions[0, 0], positions[0, 1], positions[0, 2], c="green", s=100, marker="o", edgecolors="k", label="Start")
         ax.scatter(positions[-1, 0], positions[-1, 1], positions[-1, 2], c="red", s=100, marker="*", edgecolors="k", label="End")
+        # 添加方向标注（如果提供了四元数）
+        if orientations is not None:
+            # 确保四元数数量与位置点匹配
+            if len(orientations) != len(positions):
+                raise ValueError("位置点和方向四元数数量不匹配")
 
+            # 每隔step个点绘制方向箭头
+            for i in range(0, len(positions), step):
+                pos = positions[i]
+                quat_xyzw = orientations[i]
+
+                # 创建旋转对象（使用XYZW格式）
+                rotation = R.from_quat(quat_xyzw)
+
+                # 获取坐标轴方向向量
+                x_axis = rotation.apply([scale, 0, 0])
+                y_axis = rotation.apply([0, scale, 0])
+                z_axis = rotation.apply([0, 0, scale])
+
+                # 绘制坐标轴
+                ax.quiver(pos[0], pos[1], pos[2],
+                        x_axis[0], x_axis[1], x_axis[2],
+                        color="r", linewidth=1.5, alpha=0.8)
+                ax.quiver(pos[0], pos[1], pos[2],
+                        y_axis[0], y_axis[1], y_axis[2],
+                        color="g", linewidth=1.5, alpha=0.8)
+                ax.quiver(pos[0], pos[1], pos[2],
+                        z_axis[0], z_axis[1], z_axis[2],
+                        color="b", linewidth=1.5, alpha=0.8)
         # 添加坐标轴
         ax.quiver(0, 0, 0, 0.1, 0, 0, color="r", lw=2, alpha=0.5, label="X-axis")
         ax.quiver(0, 0, 0, 0, 0.1, 0, color="g", lw=2, alpha=0.5, label="Y-axis")
@@ -162,11 +195,12 @@ if __name__ == "__main__":
     # 示例用法
     planner = TrajectoryPlanner()
 
-    start_pose = planner.create_pose([0, 0, 0], [1, 0, 0, 0])
-    end_pose = planner.create_pose([0.5, 0.5, 0.5], [1, 0, 0, 0])
+    start_pose = planner.create_pose([0.32497879, 0.19681914, -0.06855335], [0.0, -0.0, -0.0, 1.0])
+    end_pose = planner.create_pose([0.22497879, 0.19681914, 0.06855335], [0.65497752, -0.53508699, -0.36644699, 0.38781821])
     
     positions, orientations = planner.plan(start_pose, end_pose, steps=20, is_random=True, direction=[1.5, 1.5, 1.5])
     
     # 可视化轨迹
     positions_array = np.array(positions)
     TrajectoryPlanner.visualize_trajectory(positions_array)
+    TrajectoryPlanner.visualize_trajectory(positions_array, orientations, step=3, scale=0.05)

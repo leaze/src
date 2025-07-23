@@ -27,6 +27,7 @@ import time
 from solver.tracik.arm_solver_que import ArmTracIKSolver
 from solver.mix.my_solver import MySolver
 from controllers.pid_controller import PIDController as PID
+from trajectory.trajectory import TrajectoryPlanner
 
 
 class ArmController:
@@ -34,13 +35,14 @@ class ArmController:
         # 左右臂运动学求解器
         # self.arm_left_kinematics = ArmKinematics(True)
         # self.arm_right_kinematics = ArmKinematics(False)
-        self.arm_left_kinematics = ArmTracIKSolver("./ur_record/urdf/robot.urdf", "pelvis", "wrist_roll_l_link")
-        self.arm_right_kinematics = ArmTracIKSolver("./ur_record/urdf/robot.urdf", "pelvis", "wrist_roll_r_link")
+        self.arm_left_kinematics = MySolver("./ur_record/urdf/robot.urdf", "pelvis", "wrist_roll_l_link")
+        self.arm_right_kinematics = MySolver("./ur_record/urdf/robot.urdf", "pelvis", "wrist_roll_r_link")
+        self.planner = TrajectoryPlanner()
         self.arm_kinematics = [self.arm_right_kinematics, self.arm_left_kinematics]
         self.mirror_ls = [1, -1, -1, 1, -1, 1, -1]
         # 控制器参数
-        self.joint_speed = rospy.get_param("~joint_speed", 150)  # rpm
-        self.joint_current = rospy.get_param("~joint_current", 80.0)  # A
+        self.joint_speed = rospy.get_param("~joint_speed", 1)  # rpm
+        self.joint_current = rospy.get_param("~joint_current", 5.0)  # A
         self.joint_tolerance = rospy.get_param("~joint_tolerance", 0.01)  # rad
         self.tr_distance = rospy.get_param("~tr_distance", 0.05)  # m
         self.tr_point_time = rospy.get_param("~tr_point_time", min(0.2, 2 * math.pi / self.joint_speed))  # s
@@ -49,9 +51,11 @@ class ArmController:
         self.condition = threading.Condition(self.lock)
         self.target_dict = {}  # 存储当前目标位置 {joint_name: target_position}
         # 关节状态变量
+        self.init_left_joints = [0.0, 0.35, 0.0, -0.0, 0.0, 0.0, -0.0]
+        self.init_right_joints = [0.0, -0.35, 0.0, -0.0, 0.0, 0.0, -0.0]
         self.left_joint_status = {"name": [], "pos": [], "speed": [], "current": [], "temp": [], "error": []}
-        self.left_joint_positions = [0.0, 0.15, 0.0, -0.0, 0.0, 0.0, 0.0]
-        self.right_joint_positions = [0.0, -0.15, 0.0, -0.0, 0.0, 0.0, 0.0]
+        self.left_joint_positions = [0.0, 0.35, 0.0, -0.0, 0.0, 0.0, 0.0]
+        self.right_joint_positions = [0.0, -0.35, 0.0, -0.0, 0.0, 0.0, 0.0]
         self.dual_joint_positions = [self.right_joint_positions, self.left_joint_positions]
         self.left_end_effector_pose, self.right_end_effector_rota, self.left_end_effector_quat = self.arm_left_kinematics.forward_kinematics(self.left_joint_positions)
         self.right_end_effector_pose, self.right_end_effector_rota, self.right_end_effector_quat = self.arm_right_kinematics.forward_kinematics(self.right_joint_positions)
@@ -66,25 +70,9 @@ class ArmController:
         self.pid_controllers = {}
         joint_ids = self.joint_names[True] + self.joint_names[False]
         for jid in joint_ids:
-            self.pid_controllers[jid] = PID(
-                kp=self.pid_kp,
-                ki=self.pid_ki,
-                kd=self.pid_kd,
-                min=self.pid_min_output,
-                max=self.pid_max_output
-            )
-        
-        # 控制频率 (Hz)
-        self.control_freq = rospy.get_param("~control_freq", 50.0)
-        self.control_period = rospy.Duration(1.0 / self.control_freq)
-        
-        # 创建控制定时器
-        self.control_timer = rospy.Timer(self.control_period, self.control_loop_callback)
-        
+            self.pid_controllers[jid] = PID(name=jid, kp=self.pid_kp, ki=self.pid_ki, kd=self.pid_kd, min=self.pid_min_output, max=self.pid_max_output)
         # PID控制器启用标志
-        self.pid_enabled = True
-        self.current_targets = {}  # {关节ID: 目标位置}
-        self.last_positions = {}   # 用于计算速度的上一位置
+        self.pid_enabled = False
         # 设置订阅者
         rospy.Subscriber("/arm/status", MotorStatusMsg, self.arm_status_callback)
         # 设置发布者
@@ -100,79 +88,6 @@ class ArmController:
             rospy.loginfo("PID control enabled")
         else:
             rospy.logwarn("PID control disabled")
-
-    def reset_pid_controllers(self):
-        """重置所有PID控制器状态"""
-        for pid in self.pid_controllers.values():
-            pid.reset()
-        rospy.loginfo("All PID controllers reset")
-
-    def control_loop_callback(self, event):
-        """PID控制循环定时器回调"""
-        if not self.pid_enabled or not self.current_targets:
-            return
-            
-        current_time = time.time()
-        
-        with self.lock:
-            cmd_msgs_ = CmdSetMotorPosition()
-            cmd_msgs_.header = Header(stamp=rospy.Time.now(), frame_id="")
-            
-            # 处理每个有目标位置的关节
-            for jid, target_info in self.current_targets.items():
-                # 获取当前关节位置
-                if jid not in self.left_joint_status["name"]:
-                    continue
-                    
-                idx = self.left_joint_status["name"].index(jid)
-                current_pos = self.left_joint_status["pos"][idx]
-                
-                # 获取PID控制器
-                pid = self.pid_controllers[jid]
-                
-                # 计算位置误差
-                error = target_info['position'] - current_pos
-                
-                # 计算PID输出 (控制作用)
-                try:
-                    # 尝试获取上一位置计算速度
-                    last_pos = self.last_positions.get(jid, current_pos)
-                    dt = 1.0 / self.control_freq
-                    velocity = (current_pos - last_pos) / dt
-                except:
-                    velocity = 0.0
-                    
-                control_output = pid.update(
-                    error, 
-                    derivative=velocity,  # 使用实际速度作为微分项
-                    current_time=current_time
-                )
-                
-                # 使用PID输出作为电流控制
-                # (实际实现需根据驱动器调整)
-                control_current = min(
-                    max(
-                        target_info['current'] * (1 + control_output),
-                        self.pid_min_output
-                    ),
-                    self.pid_max_output
-                )
-                
-                # 创建控制命令
-                cmd = SetMotorPosition(
-                    name=jid,
-                    pos=target_info['position'],  # 目标位置
-                    spd=target_info['speed'],     # 最大速度限制
-                    cur=control_current           # PID调整后的电流
-                )
-                cmd_msgs_.cmds.append(cmd)
-                
-                # 更新上一位置
-                self.last_positions[jid] = current_pos
-                
-            # 发布PID控制命令
-            if cmd_msgs_.cmds:
-                self.arm_cmd_pos_pub.publish(cmd_msgs_)
 
     def ik_dual(self, left_target_position, left_target_quaternion, left_initial_angles, right_target_position, right_target_quaternion, right_initial_angles):
         # 优先求解误差小的臂
@@ -251,15 +166,8 @@ class ArmController:
             self.arm_cmd_pos_pub.publish(cmd_msgs_)
         else:
             # PID控制模式：设置目标位置
-            with self.lock:
-                for i, name in enumerate(name_ls):
-                    self.current_targets[name] = {
-                        'position': pos_ls[i],
-                        'speed': spd_ls[i],
-                        'current': cur_ls[i]
-                    }
-                    # 重置该关节的PID控制器
-                    self.pid_controllers[name].reset()
+            rospy.logerr("PID Control Mode")
+            pass
 
     def send_arms_cmd_pos_service(self, name_ls: List[int], pos_ls: List[float], 
                                  spd_ls: List[float], cur_ls: List[float]) -> bool:
@@ -307,9 +215,6 @@ class ArmController:
         # 清除目标字典
         with self.lock:
             self.target_dict = {}
-            for name in name_ls:
-                if name in self.current_targets:
-                    del self.current_targets[name]
 
         return success
 
@@ -366,33 +271,6 @@ class ArmController:
         rospy.loginfo("Dual Arm Rotate Success") if left_arm_move_status and right_arm_move_status else rospy.logerr("Dual Arm Rotate Failed")
         return left_arm_move_status and right_arm_move_status
 
-    def set_end_effector_target(self, is_left: bool, target_pos: np.ndarray, target_ori: np.ndarray, use_matrix=False):
-        # 生成轨迹(2厘米生成一个点, 减少数量以加快计算)
-        start_pos, start_rot, start_quat = self.arm_kinematics[is_left].forward_kinematics(self.dual_joint_positions[is_left])
-        positions = self.arm_kinematics[is_left].generate_trajectory_by_dist(start_pos, target_pos, self.tr_distance)
-        # orientations = self.arm_kinematics[is_left].generate_trajectory_by_dist(start_quat, target_ori, self.tr_distance)
-        if len(positions) == 0:
-            rospy.logwarn("No trajectory points generated, check target position and distance.")
-            positions = [target_pos]  # 如果没有生成点，则直接使用目标位置
-        joint_trajectory = []
-        all_positions = []
-        # 跟踪前一步关节角度
-        prev_joints = self.dual_joint_positions[is_left]
-        for i, pos in enumerate(positions):
-            # 使用上一步的解作为初始值
-            joint_angles_ = self.arm_kinematics[is_left].inverse_kinematics(
-                pos,
-                target_quaternion=target_ori,
-                initial_angles=prev_joints,
-                orientation_weight=1.0,
-                use_rotation_matrix=use_matrix,
-            )
-            joint_trajectory.append(joint_angles_)
-            # 正向运动学验证
-            calc_pos_, calc_rot, calc_quat_ = self.arm_kinematics[is_left].forward_kinematics(joint_angles_)
-            all_positions.append(calc_pos_)
-        return joint_trajectory, all_positions
-
     def move_along_direction(self, position, quaternion, direction_vector, distance=0.05):
         """
         沿着指定方向（在当前朝向基础上）移动一定距离。
@@ -418,8 +296,10 @@ class ArmController:
         new_position = position + displacement
         return new_position
 
-    def move_single_arm_tr(self, is_left, target_pos, target_quat):
-        trajectory_, all_points_ = self.set_end_effector_target(is_left, target_pos, target_quat)
+    def move_single_arm_tr(self, is_left, target_pos, target_quat, steps=5, is_random=True, direction=[1.0, 1.0, 1.0]):
+        start_pos_ = self.planner.create_pose(self.left_end_effector_pose, self.left_end_effector_quat)
+        end_pos_ = self.planner.create_pose(target_pos, target_quat)
+        trajectory_, all_points_ = self.planner.plan(start_pos_, end_pos_, steps, is_random=is_random, direction=direction)
         # 创建整个轨迹消息
         for j, (tr_, pos_) in enumerate(zip(trajectory_, all_points_)):
             speeds = [self.joint_speed] * 7  # RPM值
@@ -444,54 +324,32 @@ class ArmController:
         right_true_error2_ = np.linalg.norm(np.array(right_target_pos) - np.array(self.right_end_effector_pose))  # 右臂实际末端位置误差
         left_arm_move_status, right_arm_move_status = left_true_error2_ < self.joint_tolerance, right_true_error2_ < self.joint_tolerance
         rospy.loginfo("Arm Move Success") if left_arm_move_status and right_arm_move_status else rospy.loginfo("Arm Move Failed")
-        rospy.logerr(f"left_true_error2_ = {left_true_error2_}, right_true_error2_ = {right_true_error2_}")
+        rospy.logwarn(f"left_true_error2_ = {left_true_error2_}, right_true_error2_ = {right_true_error2_}")
         return left_true_error2_ < self.joint_tolerance and right_true_error2_ < self.joint_tolerance
 
-    def move_dual_arm_by_xyz_tr(self, left_target_pos, left_target_quat, right_target_pos, right_target_quat):
+    def move_dual_arm_by_xyz_tr(self, left_target_pos, left_target_quat, right_target_pos, right_target_quat, steps=5, is_random=True, direction=[1., 0., 1.]):
         # 分别计算左右臂的轨迹
-        # traj_left_joints_ = self.arm_kinematics[True].generate_trajectory_by_dist(self.left_end_effector_pose, left_target_pos, self.tr_distance)
-        # traj_right_joints_ = self.arm_kinematics[False].generate_trajectory_by_dist(self.right_end_effector_pose, right_target_pos, self.tr_distance)
-        left_start_pos_ = self.arm_kinematics[True].create_pose(self.left_end_effector_pose, self.left_end_effector_quat)
-        left_end_pos_ = self.arm_kinematics[True].create_pose(left_target_pos, left_target_quat)
-        right_start_pos_ = self.arm_kinematics[False].create_pose(self.right_end_effector_pose, self.right_end_effector_quat)
-        right_end_pos_ = self.arm_kinematics[False].create_pose(right_target_pos, right_target_quat)
-        traj_left_joints_ = self.arm_kinematics[True].plan(left_start_pos_, left_end_pos_, 10, True, [1., 0., 1.])
-        traj_right_joints_ = self.arm_kinematics[False].plan(right_start_pos_, right_end_pos_, 10, True, [1., 0., 1.])
-        n_left = len(traj_left_joints_)
-        n_right = len(traj_right_joints_)
-        n_points = max(n_left, n_right)
-        # 轨迹插值同步
-        if n_left != n_right:
-            # 时间归一化处理
-            orig_index_left = np.linspace(0, 1, n_left)
-            orig_index_right = np.linspace(0, 1, n_right)
-            new_index = np.linspace(0, 1, n_points)
-
-            # 插值处理
-            synced_left = []
-            for joint_idx in range(7):
-                joint_values = [point[joint_idx] for point in traj_left_joints_]
-                synced_values = np.interp(new_index, orig_index_left, joint_values)
-                synced_left.append(synced_values)
-            traj_left_joints_ = np.array(synced_left).T
-
-            synced_right = []
-            for joint_idx in range(7):
-                joint_values = [point[joint_idx] for point in traj_right_joints_]
-                synced_values = np.interp(new_index, orig_index_right, joint_values)
-                synced_right.append(synced_values)
-            traj_right_joints_ = np.array(synced_right).T
-        for i in range(n_points):
-            left_target_pos = traj_left_joints_[i]
-            right_target_pos = traj_right_joints_[i]
+        # traj_left_points_ = self.arm_kinematics[True].generate_trajectory_by_dist(self.left_end_effector_pose, left_target_pos, self.tr_distance)
+        # traj_right_points_ = self.arm_kinematics[False].generate_trajectory_by_dist(self.right_end_effector_pose, right_target_pos, self.tr_distance)
+        left_start_pos_ = self.planner.create_pose(self.left_end_effector_pose, self.left_end_effector_quat)
+        left_end_pos_ = self.planner.create_pose(left_target_pos, left_target_quat)
+        right_start_pos_ = self.planner.create_pose(self.right_end_effector_pose, self.right_end_effector_quat)
+        right_end_pos_ = self.planner.create_pose(right_target_pos, right_target_quat)
+        traj_left_points_, traj_left_xyzw_ = self.planner.plan(left_start_pos_, left_end_pos_, steps, is_random, direction)
+        traj_right_points_, traj_right_xyzw_ = self.planner.plan(right_start_pos_, right_end_pos_, 5, is_random, direction)
+        for i in range(steps):
+            left_target_pos = traj_left_points_[i]
+            left_target_quat = [traj_left_xyzw_[i][3], traj_left_xyzw_[i][0], traj_left_xyzw_[i][1], traj_left_xyzw_[i][2]]
+            right_target_pos = traj_right_points_[i]
+            right_target_quat = [traj_right_xyzw_[i][3], traj_right_xyzw_[i][0], traj_right_xyzw_[i][1], traj_right_xyzw_[i][2]]
             left_target_joint_, right_target_joint_ = self.ik_dual(left_target_pos, left_target_quat, self.dual_joint_positions[True], right_target_pos, right_target_quat, self.dual_joint_positions[False])
-            self.send_arms_cmd_pos_service(self.joint_names[True] + self.joint_names[False], list(left_target_joint_) + list(right_target_joint_), [self.joint_speed] * 14, [self.joint_current] * 14)
-            # rospy.sleep(3.0)
+            self.send_arms_cmd_pos(self.joint_names[True] + self.joint_names[False], list(left_target_joint_) + list(right_target_joint_), [self.joint_speed] * 14, [self.joint_current] * 14)
+            rospy.sleep(0.1)
             left_true_error2_ = np.linalg.norm(np.array(left_target_pos) - np.array(self.left_end_effector_pose))  # 左臂实际末端位置误差
             right_true_error2_ = np.linalg.norm(np.array(right_target_pos) - np.array(self.right_end_effector_pose))  # 右臂实际末端位置误差
             left_arm_move_status, right_arm_move_status = left_true_error2_ < self.joint_tolerance, right_true_error2_ < self.joint_tolerance
             rospy.loginfo("Arm Move Success") if left_arm_move_status and right_arm_move_status else rospy.loginfo("Arm Move Failed")
-            rospy.logerr(f"left_true_error2_ = {left_true_error2_}, right_true_error2_ = {right_true_error2_}")
+            rospy.logwarn(f"left_true_error2_ = {left_true_error2_}, right_true_error2_ = {right_true_error2_}")
         return left_true_error2_ < self.joint_tolerance and right_true_error2_ < self.joint_tolerance
 
     def move_single_forward(self, is_left: bool, distance: float) -> bool:
@@ -589,10 +447,10 @@ class ArmController:
         left_target_quat_ = self.left_end_effector_quat
         right_target_quat_ = self.right_end_effector_quat
         # 执行移动
-        move_up_left_success, move_up_right_success = self.move_dual_arm_by_xyz(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
-        rospy.loginfo("Moved up successfully") if move_up_left_success and move_up_right_success else rospy.logerr("Moved up Failed")
+        move_up_success = self.move_dual_arm_by_xyz(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
+        rospy.loginfo("Moved up successfully") if move_up_success else rospy.logerr("Moved up Failed")
         # 打印调试信息
-        return move_up_left_success and move_up_right_success
+        return move_up_success
 
     def move_dual_down(self, distance: float) -> bool:
         """向下移动指定距离"""
@@ -661,15 +519,11 @@ class ArmController:
     def init_arm_status(self):
         rospy.loginfo("Arm Controller Initializing...")
         all_joint_names = self.joint_names[True] + self.joint_names[False]
-        all_positions = [0.0] * 14  # 初始化所有关节位置为0
-        all_positions[1] = 0.15
-        all_positions[8] = -0.15
-        # all_positions[3] = -1.57
-        # all_positions[10] = -1.57
+        all_positions = self.init_left_joints + self.init_right_joints
         speeds = [self.joint_speed] * 14
         currents = [self.joint_current] * 14
-        self.send_arms_cmd_pos(all_joint_names, all_positions, speeds, currents)
-        rospy.sleep(2.5)
+        self.send_arms_cmd_pos_service(all_joint_names, all_positions, speeds, currents)
+        # rospy.sleep(2.0)
         dual_joint_error_ = np.linalg.norm(np.array(self.left_joint_positions + self.right_joint_positions) - np.array(all_positions))
         rospy.loginfo(f"Arm Initialization Status: {dual_joint_error_ < self.joint_tolerance}, dual joint error: {dual_joint_error_:.4f}")
         return dual_joint_error_ < self.joint_tolerance

@@ -1,7 +1,9 @@
 import time
 
 class PIDController:
-    def __init__(self, kp, ki, kd, min=0.0, max=0.1):
+    def __init__(self, name, kp, ki, kd, min=0.0, max=0.1):
+        self.name = name
+        # PID参数
         self.kp = kp
         self.ki = ki
         self.kd = kd
