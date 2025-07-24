@@ -2,3 +2,7 @@
 	path = control/tracikpy
 	url = https://github.com/Star-Cheng/tracikpy.git
 	branch = main
+[submodule "mujoco"]
+	path = mujoco
+	url = https://github.com/Star-Cheng/mujoco.git
+	branch = master

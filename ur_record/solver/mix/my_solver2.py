@@ -22,9 +22,18 @@ class MySolver(TracIKSolver):
         solve_type="Speed",
     ):
         super().__init__(urdf_file, base_link, tip_link, timeout, epsilon, solve_type)
-        self.ik_method = "SLSQP"
+        self.ik_method = "SLSQP"  # SLSQP, trust-constr
         self.lb, self.ub = self.joint_limits
         self.joint_limits_ = [(self.lb[i], self.ub[i]) for i in range(len(self.lb))][1:]
+        # self.joint_limits_ = [
+        #     (-2.96, 2.96),  # shoulder_pitch
+        #     (-3.4, 0.2618) if is_left else (-0.2618, 3.4),  # shoulder_roll
+        #     (-2.96, 2.96),  # shoulder_yaw
+        #     (-2.61, 0.261),  # elbow_pitch
+        #     (-2.9671, 2.9671),  # elbow_yaw
+        #     (-1.3, 1.65),  # wrist_pitch
+        #     (-1.04, 0.785),  # wrist_roll
+        # ]
         self.lambda_damp = 0.01  # DLS阻尼因子初始值
         self.max_lambda = 0.1   # 最大阻尼因子
         self.singular_threshold = 1e-4  # 奇异值判定阈值
@@ -135,8 +144,11 @@ class MySolver(TracIKSolver):
         return result.x if result.success else joint_angles
     
     # 重构：使用流程图策略的并行求解器
-    def inverse_kinematics(self, target_position, target_quaternion=None, initial_angles=None):
+    def inverse_kinematics(self, target_position, target_quaternion=None, initial_angles=None, is_parallel=True):
         # 并行求解器 - 牛顿拉夫森法和SQP法
+        if not is_parallel:
+            # 单线程求解
+            return self._solve_with_optimizer(target_position, target_quaternion, initial_angles, self.ik_method)
         with concurrent.futures.ThreadPoolExecutor() as executor:
             # 任务1：牛顿拉夫森法（使用SLSQP优化器）
             nr_future = executor.submit(
@@ -164,7 +176,7 @@ class MySolver(TracIKSolver):
         
         # 选择最快且有效的解
         best_solution = None
-        for result, solution in results:
+        for solution in results:
             if solution is not None:
                 best_solution = solution
                 break
@@ -240,8 +252,25 @@ class MySolver(TracIKSolver):
         
         # 返回结果和求解时间
         if result.success:
-            return solve_time, result.x
-        return solve_time, None
+            return result.x
+        else:
+            # 如果优化失败，尝试使用不同的初始值
+            best_result = result.x
+            best_error = objective(result.x)
+
+            for _ in range(5):
+                new_initial = [np.random.uniform(low, high) for (low, high) in self.joint_limits_]
+                new_result = minimize(objective, new_initial, method=self.ik_method, bounds=self.joint_limits_)
+                if new_result.success:
+                    return new_result.x
+                new_error = objective(new_result.x)
+                if new_error < best_error:
+                    best_error = new_error
+                    best_result = new_result.x
+
+            # 返回最佳近似解
+            return best_result
+        # return solve_time, None
     
     # 重构：计算位姿误差（独立方法）
     def _calculate_pose_error(self, joint_angles, target_position, target_quaternion=None):
@@ -394,7 +423,13 @@ if __name__ == "__main__":
     right_quat = [0.6549775332099196, 0.5350869754628191, -0.36644696956112155, -0.38781822827166285]
     init_right_joints = None
     while True:
-        left_joints = arm_left_kinematics.inverse_kinematics(left_pos, left_quat, init_left_joints)
-        right_joints = arm_right_kinematics.inverse_kinematics(right_pos, right_quat, init_right_joints)
+        left_joints = arm_left_kinematics.inverse_kinematics(left_pos, left_quat, init_left_joints, is_parallel=False)
+        right_joints = arm_right_kinematics.inverse_kinematics(right_pos, right_quat, init_right_joints, is_parallel=False)
         print("left_joints = ", list(left_joints))
         print("right_joints = ", list(right_joints))
+        # 正向运动学：计算末端位姿（位置和方向）
+        valid_left_pos, valid_left_rot, valid_left_quat = arm_left_kinematics.forward_kinematics(left_joints)
+        valid_right_pos, valid_right_rot, valid_right_quat = arm_right_kinematics.forward_kinematics(right_joints)
+        valid_diff_xyz = np.linalg.norm(np.array(left_pos) - np.array(valid_left_pos))
+        valid_diff_quat = np.linalg.norm(np.array(left_quat) - np.array(valid_left_quat))
+        print(f"valid_diff_xyz = {valid_diff_xyz}, valid_diff_quat = {valid_diff_quat}")

@@ -35,8 +35,8 @@ class ArmController:
         # 左右臂运动学求解器
         # self.arm_left_kinematics = ArmKinematics(True)
         # self.arm_right_kinematics = ArmKinematics(False)
-        self.arm_left_kinematics = MySolver("./ur_record/urdf/robot.urdf", "pelvis", "wrist_roll_l_link")
-        self.arm_right_kinematics = MySolver("./ur_record/urdf/robot.urdf", "pelvis", "wrist_roll_r_link")
+        self.arm_left_kinematics = ArmTracIKSolver("./ur_record/urdf/robot.urdf", "pelvis", "wrist_roll_l_link")
+        self.arm_right_kinematics = ArmTracIKSolver("./ur_record/urdf/robot.urdf", "pelvis", "wrist_roll_r_link")
         self.planner = TrajectoryPlanner()
         self.arm_kinematics = [self.arm_right_kinematics, self.arm_left_kinematics]
         self.mirror_ls = [1, -1, -1, 1, -1, 1, -1]
@@ -98,12 +98,12 @@ class ArmController:
         right_pos, _, right_quat = self.arm_right_kinematics.forward_kinematics(right_joints)
         left_diff = np.linalg.norm(left_pos - left_target_position)
         right_diff = np.linalg.norm(right_pos - right_target_position)
-        if left_diff < right_diff:
-            for i in range(len(right_joints)):
-                right_joints[i]= left_joints[i] * self.mirror_ls[i]
-        else:
-            for i in range(len(left_joints)):
-                left_joints[i]= right_joints[i] * self.mirror_ls[i]
+        # if left_diff < right_diff:
+        #     for i in range(len(right_joints)):
+        #         right_joints[i]= left_joints[i] * self.mirror_ls[i]
+        # else:
+        #     for i in range(len(left_joints)):
+        #         left_joints[i]= right_joints[i] * self.mirror_ls[i]
         return left_joints, right_joints
 
     def arm_status_callback(self, arm_status_msg: MotorStatusMsg):
@@ -344,7 +344,7 @@ class ArmController:
             right_target_quat = [traj_right_xyzw_[i][3], traj_right_xyzw_[i][0], traj_right_xyzw_[i][1], traj_right_xyzw_[i][2]]
             left_target_joint_, right_target_joint_ = self.ik_dual(left_target_pos, left_target_quat, self.dual_joint_positions[True], right_target_pos, right_target_quat, self.dual_joint_positions[False])
             self.send_arms_cmd_pos(self.joint_names[True] + self.joint_names[False], list(left_target_joint_) + list(right_target_joint_), [self.joint_speed] * 14, [self.joint_current] * 14)
-            rospy.sleep(0.1)
+            rospy.sleep(0.01)
             left_true_error2_ = np.linalg.norm(np.array(left_target_pos) - np.array(self.left_end_effector_pose))  # 左臂实际末端位置误差
             right_true_error2_ = np.linalg.norm(np.array(right_target_pos) - np.array(self.right_end_effector_pose))  # 右臂实际末端位置误差
             left_arm_move_status, right_arm_move_status = left_true_error2_ < self.joint_tolerance, right_true_error2_ < self.joint_tolerance
@@ -411,10 +411,12 @@ class ArmController:
         left_target_quat_ = left_start_quat_
         right_target_quat_ = right_start_quat_
         # 执行移动
-        move_forward_left_success, move_forward_right_success = self.move_dual_arm_by_xyz(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
+        print("left_start_pos_", left_start_pos_)
+        print("left_target_pos_", left_target_pos_)
+        move_forward_success = self.move_dual_arm_by_xyz(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
         # 打印调试信息
-        rospy.loginfo("Moved forward successfully") if move_forward_left_success and move_forward_right_success else rospy.logerr("Failed to move forward")
-        return move_forward_left_success and move_forward_right_success
+        rospy.loginfo("Moved forward successfully") if move_forward_success else rospy.logerr("Failed to move forward")
+        return move_forward_success
 
     def move_dual_backward(self, distance: float) -> bool:
         """后退指定距离"""

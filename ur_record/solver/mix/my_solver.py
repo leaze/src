@@ -288,8 +288,14 @@ if __name__ == "__main__":
     right_pos = [0.32759669516187234, -0.1967146327303412, -0.07190695670671113]
     right_quat = [0.6549775332099196, 0.5350869754628191, -0.36644696956112155, -0.38781822827166285]
     init_right_joints = None
-    if True:
+    while True:
         left_joints = arm_left_kinematics.inverse_kinematics(left_pos, left_quat, init_left_joints)
         right_joints = arm_right_kinematics.inverse_kinematics(right_pos, right_quat, init_right_joints)
         print("left_joints = ", list(left_joints))
         print("right_joints = ", list(right_joints))
+        # 正向运动学：计算末端位姿（位置和方向）
+        valid_left_pos, valid_left_rot, valid_left_quat = arm_left_kinematics.forward_kinematics(left_joints)
+        valid_right_pos, valid_right_rot, valid_right_quat = arm_right_kinematics.forward_kinematics(right_joints)
+        valid_diff_xyz = np.linalg.norm(np.array(left_pos) - np.array(valid_left_pos))
+        valid_diff_quat = np.linalg.norm(np.array(left_quat) - np.array(valid_left_quat))
+        print(f"valid_diff_xyz = {valid_diff_xyz}, valid_diff_quat = {valid_diff_quat}")

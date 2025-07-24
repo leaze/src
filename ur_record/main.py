@@ -38,28 +38,29 @@ class RobotController:
         dual_joint_error_ = np.linalg.norm(np.array(self.arm_controller.left_joint_positions + self.arm_controller.right_joint_positions) - np.array(left_position + right_position))
         rospy.loginfo(f"Arm Location Step1 Status: {dual_joint_error_ < self.arm_controller.joint_tolerance}, dual joint error: {dual_joint_error_:.4f}")
         # 定位楔子
-        left_target_pos_ = [0.4409711531681323, 0.21492773315409157, -0.20711783728977194]
-        left_target_quat_ = [-0.5824993766583517, 0.5851301607905339, 0.4671733566939692, -0.316332461061405]
+        left_pos = [0.4409711531681323, 0.21492773315409157, -0.10711783728977194]
+        left_quat = [-0.5824993766583517, 0.5851301607905339, 0.4671733566939692, -0.316332461061405]
 
-        right_target_pos_ = [0.44098031001017535, -0.21493083517530405, -0.207130417934516805]
-        right_target_quat_ = [0.5825471357726449, 0.5848687698290453, -0.4673399686813965, -0.31648176938746125]
+        right_pos = [0.44098031001017535, -0.21493083517530405, -0.107130417934516805]
+        right_quat = [0.5825471357726449, 0.5848687698290453, -0.4673399686813965, -0.31648176938746125]
         # 发送消息
-        move_wedge_success = self.arm_controller.move_dual_arm_by_xyz(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
-        grab_wedge_status = self.hand_controller.grip_wedge()
+        move_wedge_success = self.arm_controller.move_dual_arm_by_xyz(left_pos, left_quat, right_pos, right_quat)
+        # grab_wedge_status = self.hand_controller.grip_wedge()
         return move_wedge_success
 
     def grab_wedge(self):
         # 移动各个关节轴
-        left_position, right_position = [0.0, 0.15, 0.0, -1.0, 0.0, 0.0, -0.0], [0.0, -0.15, 0.0, -1.0, -0.0, 0.0, 0.0]
-        grab_step1_success = self.arm_controller.rotate_dual_joint(left_position, right_position)
+        left_joints, right_joints = [0.0, 0.15, 0.0, -1.0, 0.0, 0.0, -0.0], [0.0, -0.15, 0.0, -1.0, -0.0, 0.0, 0.0]
+        grab_step1_success = self.arm_controller.rotate_dual_joint(left_joints, right_joints)
         # 定位楔子
-        left_position = [-0.4592773565105143, -0.10781207465494458, 0.08085273463238411, -0.372475432520502, 1.1618900490820394, 0.26562390329576485, -0.6432547546848081]
-        right_position =  [-0.4592773565105143, 0.10781207465494458, -0.08085273463238411, -0.372475432520502, -1.1618900490820394, 0.26562390329576485, 0.6432547546848081]
-        grab_step2_success = self.arm_controller.rotate_dual_joint(left_position, right_position)
+        left_joints = [-0.4592773565105143, -0.10781207465494458, 0.08085273463238411, -0.372475432520502, 1.1618900490820394, 0.26562390329576485, -0.6432547546848081]
+        right_joints =  [-0.4592773565105143, 0.10781207465494458, -0.08085273463238411, -0.372475432520502, -1.1618900490820394, 0.26562390329576485, 0.6432547546848081]
+        grab_step2_success = self.arm_controller.rotate_dual_joint(left_joints, right_joints)
         # 抓取楔子
         grab_wedge_status = self.hand_controller.grip_wedge()
         rospy.sleep(1)
         grab_box_status = self.hand_controller.grip_box()
+        self.arm_controller.move_dual_forward(0.1)
         return grab_step1_success and grab_step2_success and grab_wedge_status
 
     def lift_wedge(self):
@@ -87,13 +88,35 @@ class RobotController:
 
     def insert_wedge(self):
         # 插入楔子
-        left_target_pos_ = [0.32371069, 0.19029899, -0.06846677]
-        left_target_quat_ = [0.6457788789185539, -0.5312803574078042, -0.37486812155046495, 0.40023082442580193]
+        left_target_pos_ = [0.32404316, 0.1997382, 0.00859038]
+        left_target_quat_ = [0.65053061, -0.52448355, -0.37982903, 0.39680832]
 
-        right_target_pos_ = [0.32371069, -0.19029899, -0.01846677]
-        right_target_quat_ = [0.645778878918554, 0.5312803574078042, -0.37486812155046495, -0.40023082442580193]
+        right_target_pos_ = [0.32400525, -0.19905013, 0.00859038]
+        right_target_quat_ = [0.64999305, 0.52478635, -0.37940189, -0.39769653]
         # 发送消息
         insert_wedge_success = self.arm_controller.move_dual_arm_by_xyz(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
+        self.hand_controller.grip_wedge()
+        rospy.sleep(1)
+        self.hand_controller.grip_box()
+        self.arm_controller.rotate_joint([-0.25, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [-0.25, -0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        # 插入楔子
+        left_target_pos_ = [0.32404316, 0.1997382, 0.00859038]
+        left_target_quat_ = [0.65053061, -0.52448355, -0.37982903, 0.39680832]
+
+        right_target_pos_ = [0.32400525, -0.19905013, 0.00859038]
+        right_target_quat_ = [0.64999305, 0.52478635, -0.37940189, -0.39769653]
+        
+        # insert_wedge_success = self.arm_controller.move_dual_arm_by_xyz(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
+        
+        # 插入楔子
+        left_target_pos_ = [0.15371069, 0.19029899, -0.06846677]
+        left_target_quat_ = [0.6457788789185539, -0.5312803574078042, -0.37486812155046495, 0.40023082442580193]
+
+        right_target_pos_ = [0.15371069, -0.19029899, -0.06846677]
+        right_target_quat_ = [0.645778878918554, 0.5312803574078042, -0.37486812155046495, -0.40023082442580193]
+        # # 发送消息
+        insert_wedge_success = self.arm_controller.move_dual_arm_by_xyz_tr(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_, is_random=False, direction=[1.5, 0.0, 1.5])
+        # self.arm_controller.move_dual_forward(0.05)
         return insert_wedge_success
 
     def grab_box(self):
@@ -143,12 +166,12 @@ class RobotController:
         return self.arm_controller.move_dual_up(distance)
 
     def get_arm_state(self):
-        print("left_joint_positions = ", self.arm_controller.left_joint_positions)
-        print("left_end_effector_pose = ", self.arm_controller.left_end_effector_pose)
-        print("left_end_effector_quat = ", self.arm_controller.left_end_effector_quat)
-        print("right_joint_positions = ", self.arm_controller.right_joint_positions)
-        print("right_end_effector_pose = ", self.arm_controller.right_end_effector_pose)
-        print("right_end_effector_quat = ", self.arm_controller.right_end_effector_quat)
+        print("left_joint_positions = ", list(self.arm_controller.left_joint_positions))
+        print("left_end_effector_pose = ", list(self.arm_controller.left_end_effector_pose))
+        print("left_end_effector_quat = ", list(self.arm_controller.left_end_effector_quat))
+        print("right_joint_positions = ", list(self.arm_controller.right_joint_positions))
+        print("right_end_effector_pose = ", list(self.arm_controller.right_end_effector_pose))
+        print("right_end_effector_quat = ", list(self.arm_controller.right_end_effector_quat))
 
     def run(self):
         grab_wedge_success = self.grab_wedge() if hand_init_success and arm_init_success else False
@@ -170,9 +193,9 @@ if __name__ == "__main__":
     rospy.init_node("RobotControllerNode")
     robot_controller = RobotController()
     # robot_controller.get_arm_state()
-    # move_left_status = robot_controller.arm_controller.rotate_joint([-0.0, 0.00, 0.0, 0.0, 0.0, 0.0, 0.0], [-0.0, -0.00, 0.0, 0.0, 0.0, 0.0, 0.0])
-    move_left_status = robot_controller.arm_controller.rotate_joint([-0.0, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0], [-0.0, -0.1, 0.0, 0.0, 0.0, 0.0, 0.0])
     hand_init_success = robot_controller.hand_controller.init_hand_status()
+    move_left_status = robot_controller.arm_controller.rotate_joint([-0.0, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0], [-0.0, -0.1, 0.0, 0.0, 0.0, 0.0, 0.0])
     arm_init_success = robot_controller.arm_controller.init_arm_status()
-    robot_controller.grab_box()
+    # robot_controller.location_wedge()
+    robot_controller.insert_wedge()
     print("Service test end")
