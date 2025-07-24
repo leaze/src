@@ -7,5 +7,6 @@ perception/livox_ros_driver2/
 *.STL
 *.stl
 *.obj
+*.dae
 __pycache__/
 

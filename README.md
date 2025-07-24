@@ -44,6 +44,21 @@ code
 
 ## Project
 
+### mujoco
+
+```shell
+git clone https://github.com/google-deepmind/mujoco_menagerie.git
+wget https://github.com/google-deepmind/mujoco/releases/download/3.3.0/mujoco-3.3.0-linux-x86_64.tar.gz
+export PATH=$PATH:/root/gym/code/rl/mujoco/mujoco-3.3.0/bin
+# 将 urdf 文件转换成 MJCF 格式的 xml 文件
+pip install urdf2mjcf
+pip install stl
+pip install numpy-stl
+sudo apt-get install -y blender
+pip install bpy # or blender --python blender_trans.py
+urdf2mjcf --output arm.xml arm.urdf
+```
+
 ### msckf_vio
 
 ```shell
