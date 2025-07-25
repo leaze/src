@@ -14,5 +14,6 @@
   - [x] Mujoco Moveit 联合仿真
 
 - [ ] Moveit
-  - [ ] 将dual moveit 中 topic 发布成 /arm/cmd_pos: CmdSetMotorPosition
-  - [ ] 通过 ros-bridge 桥接 将数据发送到ROS1
+  - [x] 将dual moveit 中 topic 发布成 /arm/cmd_pos: CmdSetMotorPosition
+  - [ ] set goal pose的时候需要考虑初始位置
+  - [x] 通过 ros-bridge 桥接 将数据发送到ROS1

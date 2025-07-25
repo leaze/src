@@ -38,8 +38,19 @@ python3 ur_robot/navigation/navigation_client.py
 ```shell
 # ros2 as rosbridge-server
 # ros2 host
+ros2 launch dual move_group.launch.py
 ros2 launch rosbridge_server rosbridge_websocket_launch.xml
 python3 ur_robot/moveit2/ik_service_dual.py
 # ros1 client
 python3 ur_robot/rosbridge/pub_joints.py
+ros2 launch rosbridge_server rosbridge_websocket_launch.xml address:=0.0.0.0
+```
+
+## moveit2 planning
+
+```shell
+# ros1 做为 rosbridge-server
+roslaunch rosbridge_server rosbridge_websocket.launch address:=0.0.0.0 port:=9090
+# ros2 做为 Rossbridge-server
+ros2 launch rosbridge_server rosbridge_websocket_launch.xml address:=0.0.0.0 port:=9091
 ```
