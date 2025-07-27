@@ -40,10 +40,18 @@ sudo apt-get install ros-noetic-rosbridge-server -y
 # msckf_vio
 sudo apt-get install libsuitesparse-dev -y
 sudo apt-get install ros-noetic-random-numbers -y
-cd .. && catkin_make
+# unitree_legged
+sudo apt-get install ros-$ROS_DISTRO-realsense2-camera -y
+sudo apt-get install ros-$ROS_DISTRO-joy -y
+sudo apt install libignition-math4-dev -y
+pip install pexpect rospkg pykeyboard
+sudo apt-get install ros-noetic-joy ros-noetic-teleop-twist-keyboard -y
+cd .. && catkin_make --pkg livox_laser_simulation -j16
+catkin_make -j16
 source /opt/ros/noetic/setup.bash
 # source devel/setup.bash
-echo "source $(pwd)/devel/setup.bash" >> ~/.bashrc
+echo "" >> ~/.bashrc &&  echo "source /usr/share/gazebo/setup.sh" >> ~/.bashrc
+echo "" >> ~/.bashrc &&  echo "source $(pwd)/devel/setup.bash" >> ~/.bashrc
 
 # git clone https://github.com/Star-Cheng/xv_sdk.git
 # cp -r /usr/share/ros-wrapper/xv_sdk ~/code/catkin_ws/src/

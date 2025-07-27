@@ -265,6 +265,9 @@ rosrun waterplus_map_tools wp_saver
 
 ```shell
 sudo apt install kazam -y
+kazam
+sudo apt install simplescreenrecorder -y
+simplescreenrecorder
 ```
 
 ### 速度控制

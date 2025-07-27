@@ -8,5 +8,8 @@ perception/livox_ros_driver2/
 *.stl
 *.obj
 *.dae
+*.csv
 __pycache__/
+eigen-3.4.0/
+thirdParty/
 
