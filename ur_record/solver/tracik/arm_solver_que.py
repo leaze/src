@@ -528,7 +528,7 @@ class ArmTracIKSolver(TracIKSolver):
         # 尝试不同调整
         for adjust in adjustments:
             adjusted_pose = adjust(target_pose)
-            solution = self.robust_ik(adjusted_pose, current_joints=current_joints, max_attempts=5, singularity_threshold=singularity_threshold)
+            solution = self.queue_based_ik(adjusted_pose, current_joints=current_joints, max_attempts=5, singularity_threshold=singularity_threshold)
 
             if solution is not None and not self.is_near_singularity(solution, singularity_threshold):
                 print("Singularity avoided with position adjustment.")
@@ -551,7 +551,7 @@ class ArmTracIKSolver(TracIKSolver):
             adjusted_pose = target_pose.copy()
             adjusted_pose[:3, :3] = r_adjusted.as_matrix()
 
-            solution = self.robust_ik(adjusted_pose, current_joints=current_joints, max_attempts=5, singularity_threshold=singularity_threshold)
+            solution = self.queue_based_ik(adjusted_pose, current_joints=current_joints, max_attempts=5, singularity_threshold=singularity_threshold)
 
             if solution is not None and not self.is_near_singularity(solution, singularity_threshold):
                 print(f"Singularity avoided with {angle} rad rotation adjustment.")
