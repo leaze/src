@@ -53,7 +53,7 @@ class ArmController:
         # 关节状态变量
         self.init_left_joints = [0.0, 0.35, 0.0, -0.0, 0.0, 0.0, -0.0]
         self.init_right_joints = [0.0, -0.35, 0.0, -0.0, 0.0, 0.0, -0.0]
-        self.left_joint_status = {"name": [], "pos": [], "speed": [], "current": [], "temp": [], "error": []}
+        self.dual_joint_status = {"name": [i for i in range(11, 18)] + [j for j in range(21, 28)], "pos": [0.0] * 14, "speed": [0.0] * 14, "current": [0.0] * 14, "temp": [], "error": []}
         self.left_joint_positions = [0.0, 0.35, 0.0, -0.0, 0.0, 0.0, 0.0]
         self.right_joint_positions = [0.0, -0.35, 0.0, -0.0, 0.0, 0.0, 0.0]
         self.dual_joint_positions = [self.right_joint_positions, self.left_joint_positions]
@@ -61,11 +61,14 @@ class ArmController:
         self.right_end_effector_pose, self.right_end_effector_rota, self.right_end_effector_quat = self.arm_right_kinematics.forward_kinematics(self.right_joint_positions)
         self.joint_names = {True: [i for i in range(11, 18)], False: [j for j in range(21, 28)]}
         # PID控制器参数 (需根据实际系统调整)
-        self.pid_kp = rospy.get_param("~pid_kp", 0.5)
+        self.pid_kp = rospy.get_param("~pid_kp", 1.0)
         self.pid_ki = rospy.get_param("~pid_ki", 0.01)
         self.pid_kd = rospy.get_param("~pid_kd", 0.1)
         self.pid_min_output = rospy.get_param("~pid_min_output", 0.0)  # 最小输出限制
         self.pid_max_output = rospy.get_param("~pid_max_output", self.joint_current)   # 最大输出限制
+        self.current_tolerance = rospy.get_param("~current_tolerance", 0.01)  # A
+        self.control_freq = rospy.get_param("~control_freq", 100.0)  # 控制频率 (Hz)
+        self.control_period = rospy.Duration(1.0 / self.control_freq)
         # 为每个关节创建PID控制器 (14个关节)
         self.pid_controllers = {}
         joint_ids = self.joint_names[True] + self.joint_names[False]
@@ -122,12 +125,12 @@ class ArmController:
         self.left_end_effector_pose, self.left_end_effector_rota, self.left_end_effector_quat = self.arm_left_kinematics.forward_kinematics(self.left_joint_positions)
         self.right_end_effector_pose, self.right_end_effector_rota, self.right_end_effector_quat = self.arm_right_kinematics.forward_kinematics(self.right_joint_positions)
         self.dual_joint_positions = [self.right_joint_positions, self.left_joint_positions]
-        self.left_joint_status["name"] = name_ls_
-        self.left_joint_status["pos"] = pos_ls_
-        self.left_joint_status["speed"] = speed_ls_
-        self.left_joint_status["current"] = current_ls_
-        self.left_joint_status["temp"] = temperature_ls_
-        self.left_joint_status["error"] = error_ls_
+        self.dual_joint_status["name"] = name_ls_
+        self.dual_joint_status["pos"] = pos_ls_
+        self.dual_joint_status["speed"] = speed_ls_
+        self.dual_joint_status["current"] = current_ls_
+        self.dual_joint_status["temp"] = temperature_ls_
+        self.dual_joint_status["error"] = error_ls_
 
     def send_arm_cmd_pos(self, name_: int, pos_: float, spd_: float, cur_: float):
         """发送单个关节的目标位置命令
@@ -167,7 +170,34 @@ class ArmController:
         else:
             # PID控制模式：设置目标位置
             rospy.logerr("PID Control Mode")
-            pass
+            error = np.inf
+            while abs(error) > self.joint_tolerance:
+                pid_out_cur = []
+                for i in range(len(name_ls)):
+                    idx = self.dual_joint_status["name"].index(name_ls[i])
+                    current_pos = self.dual_joint_status["pos"][idx]
+                    current_spd = self.dual_joint_status["speed"][idx]
+                    current_cur = self.dual_joint_status["current"][idx]
+                    target_pos = pos_ls[i]
+                    target_spd = spd_ls[i]
+                    target_cur = cur_ls[i]
+                    error = target_cur - current_cur
+                    pid = self.pid_controllers[name_ls[i]]
+                    pid_output = pid.update(error)
+                    control_current = min(max(target_cur * error, self.pid_min_output),self.pid_max_output)
+                    cmd_msgs_ = CmdSetMotorPosition()
+                    cmd_msgs_.header = Header(stamp=rospy.Time.now(), frame_id="")
+                    print("error", error)
+                    print("pid_output", pid_output)
+                    print("current_cur", current_cur)
+                    current_cur = pid_output
+                    pid_out_cur.append(control_current)
+                    rospy.sleep(self.control_period)
+                # 左臂：11---17, 右臂：21---27
+                for i in range(len(name_ls)):
+                    cmd = SetMotorPosition(name=name_ls[i], pos=pos_ls[i], spd=spd_ls[i], cur=pid_out_cur[i])  # 名称 # 弧度  # RPM  # 安培
+                    cmd_msgs_.cmds.append(cmd)
+                self.arm_cmd_pos_pub.publish(cmd_msgs_)
 
     def send_arms_cmd_pos_service(self, name_ls: List[int], pos_ls: List[float], 
                                  spd_ls: List[float], cur_ls: List[float]) -> bool:
@@ -193,9 +223,9 @@ class ArmController:
                 # 检查是否所有关节都到达目标
                 all_reached = True
                 for name, target_pos in self.target_dict.items():
-                    if name in self.left_joint_status["name"]:
-                        idx = self.left_joint_status["name"].index(name)
-                        current_pos = self.left_joint_status["pos"][idx]
+                    if name in self.dual_joint_status["name"]:
+                        idx = self.dual_joint_status["name"].index(name)
+                        current_pos = self.dual_joint_status["pos"][idx]
                         if abs(current_pos - target_pos) > self.joint_tolerance:
                             all_reached = False
                             break

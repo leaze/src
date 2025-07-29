@@ -56,7 +56,7 @@ pip install stl
 pip install numpy-stl
 sudo apt-get install -y blender
 pip install bpy # or blender --python blender_trans.py
-urdf2mjcf --output arm.xml arm.urdf
+urdf2mjcf --output single_arm_left.xml single_arm_left.urdf
 ```
 
 ### msckf_vio

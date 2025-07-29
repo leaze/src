@@ -1,6 +1,6 @@
 <launch>
   <!-- 使用直接的urdf文件路径 -->
-  <arg name="model" default="$(find tiangong_description)/urdf/arm.urdf"/>
+  <arg name="model" default="$(find tiangong_description)/urdf/single_arm_left.urdf"/>
 
   <!-- 直接加载URDF内容 -->
   <param name="robot_description" command="cat $(arg model)"/>
@@ -9,5 +9,5 @@
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
 
   <!-- RViz启动，加载配置（可选，或者空） -->
-  <!-- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find tiangong_description)/rviz/tiangong.rviz"/> -->
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find tiangong_description)/rviz/tiangong.rviz"/>
 </launch>
