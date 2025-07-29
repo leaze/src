@@ -25,7 +25,7 @@ class ArmTracIKSolver(TracIKSolver):
         self.current_joints = [0.0] * self.number_of_joints
         self.obstacle_detected = False
         self.solution_queue = []  # 新增：求解结果队列
-        self.queue_size = 10  # 队列容量
+        self.queue_size = 20  # 队列容量
 
     def robust_ik(self, ee_pose, current_joints=None, max_attempts=20, tol=1e-3, singularity_threshold=0.001):
         """
@@ -148,9 +148,9 @@ class ArmTracIKSolver(TracIKSolver):
         if self._is_valid(sol, tol, solutions):
             solutions.append(sol)
         
-        # 3. 随机种子（至少5个）
+        # 3. 随机种子（至少10个）
         attempt_count = 0
-        while len(solutions) < 5 and attempt_count < max_attempts:
+        while len(solutions) < 10 and attempt_count < max_attempts:
             qinit = np.random.default_rng().uniform(self.lb, self.ub)
             sol = self.ik(ee_pose, qinit=qinit)
             if self._is_valid(sol, tol, solutions):

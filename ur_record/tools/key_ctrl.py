@@ -12,13 +12,13 @@ import rospy
 import threading
 import time
 from std_srvs.srv import Empty
-from geometry_msgs.msg import TwistStamped
+from geometry_msgs.msg import TwistStamped  # 修改为使用 TwistStamped
 
 class G1ControlSystem:
     def __init__(self):
         self.gazebo_process = None
         self.ctrl_process = None
-        self.vel_publisher = rospy.Publisher('/hric/robot/cmd_vel', TwistStamped, queue_size=1)
+        self.vel_publisher = rospy.Publisher('/cmd_vel', TwistStamped, queue_size=1)  # 修正为 TwistStamped
         self.is_walking = False
         self.current_vel = TwistStamped()
         self.key_listener_active = True
@@ -58,21 +58,21 @@ class G1ControlSystem:
                 
                 # 处理按键
                 if ch == 'w':
-                    self.current_vel.twist.linear.x = 0.8
+                    self.current_vel.twist.linear.x = 0.05
                 elif ch == 's':
-                    self.current_vel.twist.linear.x = -0.5
+                    self.current_vel.twist.linear.x = -0.05
                 elif ch == 'a':
-                    self.current_vel.twist.linear.y = 0.5
+                    self.current_vel.twist.linear.y = 0.05
                 elif ch == 'd':
-                    self.current_vel.twist.linear.y = -0.5
+                    self.current_vel.twist.linear.y = -0.05
                 elif ch == 'q':
-                    self.current_vel.twist.angular.z = 0.5
+                    self.current_vel.twist.angular.z = 0.1
                 elif ch == 'e':
-                    self.current_vel.twist.angular.z = -0.5
+                    self.current_vel.twist.angular.z = -0.1
                 elif ch == ' ':  # 空格键
-                    self.current_vel.twist.linear.x = 0.0
-                    self.current_vel.twist.linear.y = 0.0
-                    self.current_vel.twist.angular.z = 0.0
+                    self.current_vel.twist.linear.x = 0
+                    self.current_vel.twist.linear.y = 0
+                    self.current_vel.twist.angular.z = 0
                 elif ord(ch) == 27:  # ESC键
                     self.is_walking = False
                     self.key_listener_active = False

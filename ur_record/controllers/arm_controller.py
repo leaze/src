@@ -41,8 +41,8 @@ class ArmController:
         self.arm_kinematics = [self.arm_right_kinematics, self.arm_left_kinematics]
         self.mirror_ls = [1, -1, -1, 1, -1, 1, -1]
         # 控制器参数
-        self.joint_speed = rospy.get_param("~joint_speed", 1)  # rpm
-        self.joint_current = rospy.get_param("~joint_current", 5.0)  # A
+        self.joint_speed = rospy.get_param("~joint_speed", 150)  # rpm
+        self.joint_current = rospy.get_param("~joint_current", 80.0)  # A
         self.joint_tolerance = rospy.get_param("~joint_tolerance", 0.01)  # rad
         self.tr_distance = rospy.get_param("~tr_distance", 0.05)  # m
         self.tr_point_time = rospy.get_param("~tr_point_time", min(0.2, 2 * math.pi / self.joint_speed))  # s
@@ -98,12 +98,12 @@ class ArmController:
         right_pos, _, right_quat = self.arm_right_kinematics.forward_kinematics(right_joints)
         left_diff = np.linalg.norm(left_pos - left_target_position)
         right_diff = np.linalg.norm(right_pos - right_target_position)
-        # if left_diff < right_diff:
-        #     for i in range(len(right_joints)):
-        #         right_joints[i]= left_joints[i] * self.mirror_ls[i]
-        # else:
-        #     for i in range(len(left_joints)):
-        #         left_joints[i]= right_joints[i] * self.mirror_ls[i]
+        if left_diff < right_diff:
+            for i in range(len(right_joints)):
+                right_joints[i]= left_joints[i] * self.mirror_ls[i]
+        else:
+            for i in range(len(left_joints)):
+                left_joints[i]= right_joints[i] * self.mirror_ls[i]
         return left_joints, right_joints
 
     def arm_status_callback(self, arm_status_msg: MotorStatusMsg):
@@ -335,8 +335,10 @@ class ArmController:
         left_end_pos_ = self.planner.create_pose(left_target_pos, left_target_quat)
         right_start_pos_ = self.planner.create_pose(self.right_end_effector_pose, self.right_end_effector_quat)
         right_end_pos_ = self.planner.create_pose(right_target_pos, right_target_quat)
+        print("self.left_end_effector_pose = ", self.left_end_effector_pose)
+        print("self.right_end_effector_pose = ", self.right_end_effector_pose)
         traj_left_points_, traj_left_xyzw_ = self.planner.plan(left_start_pos_, left_end_pos_, steps, is_random, direction)
-        traj_right_points_, traj_right_xyzw_ = self.planner.plan(right_start_pos_, right_end_pos_, 5, is_random, direction)
+        traj_right_points_, traj_right_xyzw_ = self.planner.plan(right_start_pos_, right_end_pos_, steps, is_random, direction)
         for i in range(steps):
             left_target_pos = traj_left_points_[i]
             left_target_quat = [traj_left_xyzw_[i][3], traj_left_xyzw_[i][0], traj_left_xyzw_[i][1], traj_left_xyzw_[i][2]]
@@ -344,7 +346,7 @@ class ArmController:
             right_target_quat = [traj_right_xyzw_[i][3], traj_right_xyzw_[i][0], traj_right_xyzw_[i][1], traj_right_xyzw_[i][2]]
             left_target_joint_, right_target_joint_ = self.ik_dual(left_target_pos, left_target_quat, self.dual_joint_positions[True], right_target_pos, right_target_quat, self.dual_joint_positions[False])
             self.send_arms_cmd_pos(self.joint_names[True] + self.joint_names[False], list(left_target_joint_) + list(right_target_joint_), [self.joint_speed] * 14, [self.joint_current] * 14)
-            rospy.sleep(0.01)
+            rospy.sleep(0.1)
             left_true_error2_ = np.linalg.norm(np.array(left_target_pos) - np.array(self.left_end_effector_pose))  # 左臂实际末端位置误差
             right_true_error2_ = np.linalg.norm(np.array(right_target_pos) - np.array(self.right_end_effector_pose))  # 右臂实际末端位置误差
             left_arm_move_status, right_arm_move_status = left_true_error2_ < self.joint_tolerance, right_true_error2_ < self.joint_tolerance
