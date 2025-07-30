@@ -5,24 +5,24 @@ from mpl_toolkits.mplot3d import Axes3D
 from tracikpy import TracIKSolver
 import matplotlib.pyplot as plt
 import numpy as np
-from arm_solver_que import ArmTracIKSolver
+from arm_solver_que_back import ArmTracIKSolver
 
 
 
 if __name__ == "__main__":
     arm_left_kinematics = ArmTracIKSolver("./ur_record/urdf/robot.urdf", "pelvis", "wrist_roll_l_link")
     # 设置目标位姿
-    start_pos = [0.32746261711182717, 0.19675063469266912, -0.07188115117764517]
-    start_quat = [0.6549774920361782, -0.5350870364142088, -0.36644692369681464, 0.3878182570490953]
+    start_pos = [0.40593656521727806, 0.19103989555676446, 0.09998230819120782]
+    start_quat = [0.6022336272331124, -0.5738677670383182, -0.45149258095975353, 0.3227148796110952]
     init_left_joints = None
     # 设置目标位姿
-    end_pos = [0.2546261711182717, 0.15675063469266912, 0.07188115117764517]
-    end_quat = [0.6549774920361782, -0.5350870364142088, -0.36644692369681464, 0.3878182570490953]
+    end_pos = [0.15371069, 0.19029899, -0.06846677]
+    end_quat = [0.6457788789185539, -0.5312803574078042, -0.37486812155046495, 0.40023082442580193]
     init_right_joints = None
     # 轨迹规划
     start_pose = arm_left_kinematics.create_pose(start_pos, start_quat)
     end_pose = arm_left_kinematics.create_pose(end_pos, end_quat)
-    points = arm_left_kinematics.plan(start_pose, end_pose, 10, True, [1.0, 1.0, 1.0])
+    points = arm_left_kinematics.plan(start_pose, end_pose, 10, False, [0.0, 0.0, 2.0])
 
     # 正向运动学验证
     for point in points:

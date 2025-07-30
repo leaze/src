@@ -41,8 +41,8 @@ class ArmController:
         self.arm_kinematics = [self.arm_right_kinematics, self.arm_left_kinematics]
         self.mirror_ls = [1, -1, -1, 1, -1, 1, -1]
         # 控制器参数
-        self.joint_speed = rospy.get_param("~joint_speed", 150)  # rpm
-        self.joint_current = rospy.get_param("~joint_current", 80.0)  # A
+        self.joint_speed = rospy.get_param("~joint_speed", 10)  # rpm
+        self.joint_current = rospy.get_param("~joint_current", 5.0)  # A
         self.joint_tolerance = rospy.get_param("~joint_tolerance", 0.01)  # rad
         self.tr_distance = rospy.get_param("~tr_distance", 0.05)  # m
         self.tr_point_time = rospy.get_param("~tr_point_time", min(0.2, 2 * math.pi / self.joint_speed))  # s

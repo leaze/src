@@ -195,12 +195,12 @@ if __name__ == "__main__":
     # 示例用法
     planner = TrajectoryPlanner()
 
-    start_pose = planner.create_pose([0.40593656521727806, 0.1997382, 0.00859038], [0.65053061, -0.52448355, -0.37982903, 0.39680832])
-    end_pose = planner.create_pose([0.15371069, 0.19029899, -0.03846677], [0.6457788789185539, -0.5312803574078042, -0.37486812155046495, 0.40023082442580193])
+    start_pose = planner.create_pose([0.40593656521727806, 0.19103989555676446, 0.09998230819120782], [0.6022336272331124, -0.5738677670383182, -0.45149258095975353, 0.3227148796110952])
+    end_pose = planner.create_pose([0.15371069, 0.19029899, -0.06846677], [0.6457788789185539, -0.5312803574078042, -0.37486812155046495, 0.40023082442580193])
     
     positions, orientations = planner.plan(start_pose, end_pose, steps=6, is_random=False, direction=[0.0, 0.0, 3.5])
     
     # 可视化轨迹
     positions_array = np.array(positions)
     TrajectoryPlanner.visualize_trajectory(positions_array)
-    TrajectoryPlanner.visualize_trajectory(positions_array, orientations, step=3, scale=0.05)
+    TrajectoryPlanner.visualize_trajectory(positions_array, orientations, step=1, scale=0.05)

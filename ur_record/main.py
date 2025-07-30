@@ -83,7 +83,15 @@ class RobotController:
         right_target_quat_ = [0.65497752, 0.53508699, -0.36644699, -0.38781821]
         # 发送消息
         move_wedge_success = self.arm_controller.move_dual_arm_by_xyz(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
-        self.arm_controller.move_dual_up(0.1)
+        # self.arm_controller.move_dual_up(0.1)
+        # 左手移动到纸箱前
+        left_target_pos_ = [0.15371069, 0.19029899, -0.06846677]
+        left_target_quat_ = [0.65053061, -0.52448355, -0.37982903, 0.39680832]
+        # 右手移动到纸箱前
+        right_target_pos_ = [0.32400525, -0.19905013, 0.00859038]
+        right_target_quat_ = [0.64999305, 0.52478635, -0.37940189, -0.39769653]
+        # 发送消息
+        move_wedge_success = self.arm_controller.move_dual_arm_by_xyz(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
         return move_wedge_success
 
     def insert_wedge(self):
@@ -106,7 +114,7 @@ class RobotController:
         right_target_pos_ = [0.15371069, -0.19029899, -0.06846677]
         right_target_quat_ = [0.645778878918554, 0.5312803574078042, -0.37486812155046495, -0.40023082442580193]
         # # 发送消息
-        insert_wedge_success = self.arm_controller.move_dual_arm_by_xyz_tr(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_, steps=6, is_random=False, direction=[0.0, 0.0, 3.5])
+        insert_wedge_success = self.arm_controller.move_dual_arm_by_xyz_tr(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_, steps=6, is_random=False, direction=[0.0, 0.0, 2.5])
         # rospy.sleep(1)
         # for i in range(5):
         #     robot_controller.arm_controller.move_dual_forward(0.05)
@@ -188,7 +196,7 @@ if __name__ == "__main__":
     robot_controller = RobotController()
     # robot_controller.get_arm_state()
     hand_init_success = robot_controller.hand_controller.init_hand_status()
-    move_left_status = robot_controller.arm_controller.rotate_joint([-0.0, 0.1, 0.0, 0.0, 0.0, 0.0, 0.0], [-0.0, -0.1, 0.0, 0.0, 0.0, 0.0, 0.0])
+    move_left_status = robot_controller.arm_controller.rotate_joint([-0.0, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0], [-0.0, -0.2, 0.0, 0.0, 0.0, 0.0, 0.0])
     arm_init_success = robot_controller.arm_controller.init_arm_status()
-    robot_controller.grab_box()
+    # robot_controller.move_wedge()
     print("Service test end")

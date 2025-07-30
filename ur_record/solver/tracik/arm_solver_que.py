@@ -454,9 +454,11 @@ class ArmTracIKSolver(TracIKSolver):
             ee_pose[:3, :3] = self.quat_to_rot_matrix(target_quaternion)
         else:
             ee_pose[:3, :3] = self.quat_to_rot_matrix(target_quaternion)
-        if initial_angles is not None:
-            self.current_joints = np.concatenate(([0], initial_angles))
-        solution = self.move_to_pose(ee_pose, 20, 0.01)
+        if initial_angles is not None and len(initial_angles) == 7:
+            initial_angles = np.concatenate(([0], initial_angles))
+        # if initial_angles is not None:
+        #     self.current_joints = np.concatenate(([0], initial_angles))
+        solution = self.move_to_pose(ee_pose, 20, 0.005)
         return solution[1:] if solution is not None else initial_angles
 
     def move_to_pose(self, target_pose, max_attempts=10, singularity_threshold=0.001):
