@@ -14,7 +14,3 @@
 	path = record_py/scripts/src/livox_ros_driver2
 	url = https://github.com/Star-Cheng/livox_ros_driver2.git
 	branch = master
-[submodule "fast_gicp"]
-	path = perception/fast_gicp
-	url = https://github.com/Star-Cheng/fast_gicp.git
-	branch = master
