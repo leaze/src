@@ -365,8 +365,8 @@ class ArmController:
         left_end_pos_ = self.planner.create_pose(left_target_pos, left_target_quat)
         right_start_pos_ = self.planner.create_pose(self.right_end_effector_pose, self.right_end_effector_quat)
         right_end_pos_ = self.planner.create_pose(right_target_pos, right_target_quat)
-        print("self.left_end_effector_pose = ", self.left_end_effector_pose)
-        print("self.right_end_effector_pose = ", self.right_end_effector_pose)
+        # print("self.left_end_effector_pose = ", self.left_end_effector_pose)
+        # print("self.right_end_effector_pose = ", self.right_end_effector_pose)
         traj_left_points_, traj_left_xyzw_ = self.planner.plan(left_start_pos_, left_end_pos_, steps, is_random, direction)
         traj_right_points_, traj_right_xyzw_ = self.planner.plan(right_start_pos_, right_end_pos_, steps, is_random, direction)
         for i in range(steps):
@@ -377,11 +377,17 @@ class ArmController:
             left_target_joint_, right_target_joint_ = self.ik_dual(left_target_pos, left_target_quat, self.dual_joint_positions[True], right_target_pos, right_target_quat, self.dual_joint_positions[False])
             self.send_arms_cmd_pos(self.joint_names[True] + self.joint_names[False], list(left_target_joint_) + list(right_target_joint_), [self.joint_speed] * 14, [self.joint_current] * 14)
             rospy.sleep(0.1)
+            fk_left_xyz_, _, _ = self.arm_kinematics[True].forward_kinematics(left_target_joint_)
+            fk_right_xyz_, _, _ = self.arm_kinematics[False].forward_kinematics(right_target_joint_)
+            diff_left_ = np.linalg.norm(fk_left_xyz_ - traj_left_points_[i])
+            diff_right_ = np.linalg.norm(fk_right_xyz_ - traj_right_points_[i])
             left_true_error2_ = np.linalg.norm(np.array(left_target_pos) - np.array(self.left_end_effector_pose))  # 左臂实际末端位置误差
             right_true_error2_ = np.linalg.norm(np.array(right_target_pos) - np.array(self.right_end_effector_pose))  # 右臂实际末端位置误差
             left_arm_move_status, right_arm_move_status = left_true_error2_ < self.joint_tolerance, right_true_error2_ < self.joint_tolerance
             rospy.loginfo("Arm Move Success") if left_arm_move_status and right_arm_move_status else rospy.loginfo("Arm Move Failed")
-            rospy.logwarn(f"left_true_error2_ = {left_true_error2_}, right_true_error2_ = {right_true_error2_}")
+            # rospy.logwarn(f"fk_left_xyz_ = {fk_left_xyz_}, traj_left_points_[i] = {traj_left_points_[i]}")
+            # rospy.logwarn(f"fk_right_xyz_ = {fk_right_xyz_}, traj_right_points_[i] = {traj_right_points_[i]}")
+            rospy.logwarn(f"left_true_error2_ = {diff_left_}, right_true_error2_ = {diff_right_}")
         return left_true_error2_ < self.joint_tolerance and right_true_error2_ < self.joint_tolerance
 
     def move_single_forward(self, is_left: bool, distance: float) -> bool:

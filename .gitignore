@@ -9,6 +9,8 @@ perception/livox_ros_driver2/
 *.obj
 *.dae
 *.csv
+*.pcd
+*.ply
 __pycache__/
 eigen-3.4.0/
 thirdParty/

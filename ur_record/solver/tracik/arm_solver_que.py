@@ -494,37 +494,17 @@ class ArmTracIKSolver(TracIKSolver):
             return self.avoid_singularity(target_pose, solution, singularity_threshold)
         return solution
 
-    def correct_for_original_target(self, solution, original_target, adjusted_pose):
-        """将调整后的解修正回原始目标位姿"""
-        # 1. 计算当前解在调整后位姿下的实际末端位置
-        current_pos = self.fk(solution)[:3, 3]
-        
-        # 2. 计算调整偏移量
-        adjustment_vector = adjusted_pose[:3, 3] - original_target[:3, 3]
-        
-        # 3. 计算反向补偿向量
-        reverse_adjustment = -adjustment_vector
-        
-        # 4. 应用补偿（仅位置补偿，保持方向不变）
-        corrected_target = np.eye(4)
-        corrected_target[:3, :3] = original_target[:3, :3]
-        corrected_target[:3, 3] = current_pos + reverse_adjustment
-        
-        # 5. 重新求解
-        return self.robust_ik(corrected_target, solution, max_attempts=3)
-
     def avoid_singularity(self, target_pose, current_joints, singularity_threshold=0.001):
-        original_target = target_pose.copy()  # 保存原始目标位姿
         """奇异规避策略"""
         # 策略1：小幅调整目标位置
         print("Trying to adjust target pose...")
         adjustments = [
-            lambda p: self._adjust_pose(p, [0, 0, 0.02]),  # Z+
-            lambda p: self._adjust_pose(p, [0, 0, -0.02]),  # Z-
-            lambda p: self._adjust_pose(p, [0.05, 0, 0]),  # X+
-            lambda p: self._adjust_pose(p, [-0.05, 0, 0]),  # X-
-            lambda p: self._adjust_pose(p, [0, 0.05, 0]),  # Y+
-            lambda p: self._adjust_pose(p, [0, -0.05, 0]),  # Y-
+            lambda p: self._adjust_pose(p, [0, 0, 0.01]),  # Z+
+            lambda p: self._adjust_pose(p, [0, 0, -0.01]),  # Z-
+            lambda p: self._adjust_pose(p, [0.02, 0, 0]),  # X+
+            lambda p: self._adjust_pose(p, [-0.02, 0, 0]),  # X-
+            lambda p: self._adjust_pose(p, [0, 0.02, 0]),  # Y+
+            lambda p: self._adjust_pose(p, [0, -0.02, 0]),  # Y-
         ]
 
         # 尝试不同调整
@@ -534,12 +514,6 @@ class ArmTracIKSolver(TracIKSolver):
 
             if solution is not None and not self.is_near_singularity(solution, singularity_threshold):
                 print("Singularity avoided with position adjustment.")
-                # ===== 新增修正步骤 =====
-                # 尝试将解修正回原始目标
-                corrected_solution = self.correct_for_original_target(solution, original_target, adjusted_pose)
-                if corrected_solution is not None:
-                    return corrected_solution
-                # ======================
                 # 验证并执行
                 valid, pos_err, rot_err = self.verify_pose(solution, adjusted_pose)
                 if valid:
@@ -553,7 +527,7 @@ class ArmTracIKSolver(TracIKSolver):
             adjusted_pose = target_pose.copy()
             adjusted_pose[:3, :3] = r_adjusted.as_matrix()
 
-            solution = self.queue_based_ik(adjusted_pose, current_joints=current_joints, max_attempts=5, singularity_threshold=singularity_threshold)
+            solution = self.robust_ik(adjusted_pose, current_joints=current_joints, max_attempts=5, singularity_threshold=singularity_threshold)
 
             if solution is not None and not self.is_near_singularity(solution, singularity_threshold):
                 print(f"Singularity avoided with {angle} rad rotation adjustment.")

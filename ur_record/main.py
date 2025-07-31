@@ -198,5 +198,5 @@ if __name__ == "__main__":
     hand_init_success = robot_controller.hand_controller.init_hand_status()
     move_left_status = robot_controller.arm_controller.rotate_joint([-0.0, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0], [-0.0, -0.2, 0.0, 0.0, 0.0, 0.0, 0.0])
     arm_init_success = robot_controller.arm_controller.init_arm_status()
-    # robot_controller.move_wedge()
+    robot_controller.insert_wedge()
     print("Service test end")
