@@ -126,3 +126,50 @@ source devel/setup.bash
 1、导航指示灯指向1亮
 2、左手摇杆控制前后、左右移动
 3、右侧摇杆控制左转和右转
+
+## 六. 运行建图
+
+一、说明：
+
+环境要求：ubuntu20.04 ros1 noetic
+如果是canda环境请先退出！！conda deactivate或暂时在.bashhrc里注释掉conda的自启动。
+
+1、编译：
+
+ Compile and install the Livox-SDK2:
+
+```shell
+cd catkin_ws/Livox-SDK/
+mkdir build
+cd build
+cmake .. && make -j
+sudo make install
+cd catkin_ws/
+source /opt/ros/noetic/setup.bash
+catkin_make
+```
+
+```shell
+2、运行建图（先启动gazebo仿真，并让机器人进入到locomotion）
+建图：
+
+运行算法：
+
+source devel/setup.bash
+roslaunch unitree_guide room.launch
+roslaunch fast_lio mapping_mid360.launch
+```
+
+```shell
+3、运行定位：（键盘控制漫游建完图，然后才能进行定位）
+定位：
+运行算法：
+
+source devel/setup.bash
+
+roslaunch mid360_locate localization.launch
+```
+
+二、作业要求：
+1、在新增的仿真环境中进行建图，行走距离30-300m的范围
+2、在新建地图中执行定位程序，通过rviz给初始化位姿，完成初始化和漫游定位

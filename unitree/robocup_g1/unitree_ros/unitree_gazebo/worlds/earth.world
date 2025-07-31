@@ -112,21 +112,21 @@
 <!-- Custom model with an STL file from a ROS package -->
     <model name="custom_stl_model">
       <static>true</static>
-      <pose>0 0 0.0 0 0 0</pose>  
+      <pose>0 0 0.2 0 0 0</pose>  
   
       <link name="football_ground">
         <visual name="visual_representation">
           <geometry>
             <mesh>
-              <uri>model://football_field.dae</uri>
+              <uri>file:///home/unitree/catkin_ws/src/unitree_ros/unitree_gazebo/worlds/football_field.dae</uri>
               <scale>0.001 0.001 0.001</scale>  
             </mesh>
           </geometry>
         </visual>
         <collision name="collision_representation">
           <geometry>
-            <mesh>
-              <uri>model://football_field.dae</uri>
+            <mesh>0
+              <uri>file:///home/unitree/catkin_ws/src/unitree_ros/unitree_gazebo/worlds/football_field.dae</uri>
               <scale>0.001 0.001 0.001</scale>
             </mesh>
             <surface>

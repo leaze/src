@@ -1,0 +1,48 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <world name="default">
+    <!-- 光照 -->
+    <include>
+      <uri>model://sun</uri>
+    </include>
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+    <!-- 草地模型 -->
+    <include>
+      <uri>model://grass_plane</uri>
+      <pose>0 0 0 0 0 0</pose>
+      <material>
+        <diffuse>1.0 1.0 1.0</diffuse>
+        <specular>1.0 1.0 1.0</specular>
+        <texture>/home/szm/robocup_g1/src/unitree_ros/unitree_gazebo/worlds/forest/grass_plane/materials/textures/Grass_Albedo.jpg</texture>
+        <normal>/home/szm/robocup_g1/src/unitree_ros/unitree_gazebo/worlds/forest/grass_plane/materials/textures/flat_normal.png</normal>
+      </material>
+    </include>
+    <!-- 森林模型 -->
+    <include>
+      <uri>model://oak_tree</uri>
+      <pose>0 0 0 0 0 0</pose>
+    </include>
+    <!-- 第一个房子模型 -->
+    <include>
+      <uri>model://house_1</uri>
+      <pose>15 15 0 0 0 0</pose>
+    </include>
+    <!-- 第二个房子模型 -->
+    <include>
+      <uri>model://house_2</uri>
+      <pose>-10 -10 0 0 0 0</pose>
+    </include>
+    <!-- 第三个房子模型 -->
+    <include>
+      <uri>model://house_1</uri>
+      <pose>10 -15 0 0 0 0</pose>
+    </include>
+    <!-- 松树模型 -->
+    <include>
+      <uri>model://pine_tree</uri>
+      <pose>0 5 0 0 0 0</pose>
+    </include>
+  </world>
+</sdf> 
