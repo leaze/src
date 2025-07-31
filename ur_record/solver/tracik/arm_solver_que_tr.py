@@ -5,7 +5,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from tracikpy import TracIKSolver
 import matplotlib.pyplot as plt
 import numpy as np
-from arm_solver_que_back import ArmTracIKSolver
+from arm_solver_que import ArmTracIKSolver
 
 
 
@@ -22,7 +22,7 @@ if __name__ == "__main__":
     # 轨迹规划
     start_pose = arm_left_kinematics.create_pose(start_pos, start_quat)
     end_pose = arm_left_kinematics.create_pose(end_pos, end_quat)
-    points = arm_left_kinematics.plan(start_pose, end_pose, 10, False, [0.0, 0.0, 2.0])
+    points, quats = arm_left_kinematics.plan(start_pose, end_pose, 10, False, [0.0, 0.0, 2.0])
 
     # 正向运动学验证
     for point in points:
@@ -34,4 +34,4 @@ if __name__ == "__main__":
         diff_ = np.linalg.norm(fk_xyz_ - point)
         print("diff_ = ", diff_)
     # 轨迹可视化
-    arm_left_kinematics.visualize_trajectory(np.array(points))
+    arm_left_kinematics.visualize_trajectory(np.array(points), np.array(quats))

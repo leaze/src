@@ -25,6 +25,7 @@ sudo apt install -y ros-noetic-fcl
 # pip install
 pip3 install transforms3d -i https://pypi.tuna.tsinghua.edu.cn/simple
 pip3 install transformations -i https://pypi.tuna.tsinghua.edu.cn/simple
+pip3 install numpy==1.23.5 -i https://pypi.tuna.tsinghua.edu.cn/simple
 pip3 install numpy-quaternion -i https://pypi.tuna.tsinghua.edu.cn/simple
 # wpb_home/wpb_home_bringup
 sudo apt install ros-noetic-teb-local-planner -y

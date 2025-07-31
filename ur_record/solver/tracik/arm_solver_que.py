@@ -21,13 +21,17 @@ class ArmTracIKSolver(TracIKSolver):
     def __init__(self, urdf_file, base_link, tip_link, timeout=0.005, epsilon=1e-5, solve_type="Speed", max_attempts=10):
         super().__init__(urdf_file, base_link, tip_link, timeout, epsilon, solve_type)
         self.lb, self.ub = self.joint_limits
+        self.lb = self.lb * 0.95
+        self.ub = self.ub * 0.95
         self.joint_mid = (self.lb + self.ub) / 2.0
         self.current_joints = [0.0] * self.number_of_joints
         self.obstacle_detected = False
         self.solution_queue = []  # 新增：求解结果队列
         self.queue_size = 20  # 队列容量
+        self.max_attempts = max_attempts
+        self.singularity_threshold = 0.005
 
-    def robust_ik(self, ee_pose, current_joints=None, max_attempts=20, tol=1e-3, singularity_threshold=0.001):
+    def robust_ik(self, ee_pose, current_joints=None, max_attempts=10, tol=1e-3, singularity_threshold=0.001):
         """
         鲁棒的逆运动学求解，确保解在物理限位内、接近当前位置且远离奇异值
 
@@ -108,7 +112,7 @@ class ArmTracIKSolver(TracIKSolver):
             
         return np.min(s) < dynamic_threshold
 
-    def queue_based_ik(self, ee_pose, current_joints=None, max_attempts=20, 
+    def queue_based_ik(self, ee_pose, current_joints=None, max_attempts=10, 
                       tol=1e-3, singularity_threshold=0.001):
         """
         基于队列的鲁棒逆运动学求解
@@ -139,12 +143,12 @@ class ArmTracIKSolver(TracIKSolver):
         
         # 1. 当前关节种子
         if current_joints is not None:
-            sol = self.ik(ee_pose, qinit=current_joints)
+            sol = self.robust_ik(ee_pose, current_joints, max_attempts=self.max_attempts)
             if self._is_valid(sol, tol, solutions):
                 solutions.append(sol)
         
         # 2. 关节中位种子
-        sol = self.ik(ee_pose, qinit=self.joint_mid)
+        sol = self.ik(ee_pose, self.joint_mid)
         if self._is_valid(sol, tol, solutions):
             solutions.append(sol)
         
@@ -152,7 +156,7 @@ class ArmTracIKSolver(TracIKSolver):
         attempt_count = 0
         while len(solutions) < 10 and attempt_count < max_attempts:
             qinit = np.random.default_rng().uniform(self.lb, self.ub)
-            sol = self.ik(ee_pose, qinit=qinit)
+            sol = self.ik(ee_pose, qinit)
             if self._is_valid(sol, tol, solutions):
                 solutions.append(sol)
             attempt_count += 1
@@ -161,7 +165,7 @@ class ArmTracIKSolver(TracIKSolver):
         if self.solution_queue:
             best_historical = min(self.solution_queue, 
                                  key=lambda x: x['score'] if 'score' in x else float('inf'))
-            sol = self.ik(ee_pose, qinit=best_historical['joints'])
+            sol = self.ik(ee_pose, best_historical['joints'])
             if self._is_valid(sol, tol, solutions):
                 solutions.append(sol)
         
@@ -458,7 +462,7 @@ class ArmTracIKSolver(TracIKSolver):
             initial_angles = np.concatenate(([0], initial_angles))
         # if initial_angles is not None:
         #     self.current_joints = np.concatenate(([0], initial_angles))
-        solution = self.move_to_pose(ee_pose, 20, 0.005)
+        solution = self.move_to_pose(ee_pose, self.max_attempts, self.singularity_threshold)
         return solution[1:] if solution is not None else initial_angles
 
     def move_to_pose(self, target_pose, max_attempts=10, singularity_threshold=0.001):
@@ -527,7 +531,7 @@ class ArmTracIKSolver(TracIKSolver):
             adjusted_pose = target_pose.copy()
             adjusted_pose[:3, :3] = r_adjusted.as_matrix()
 
-            solution = self.robust_ik(adjusted_pose, current_joints=current_joints, max_attempts=5, singularity_threshold=singularity_threshold)
+            solution = self.robust_ik(adjusted_pose, current_joints=current_joints, max_attempts=self.max_attempts, singularity_threshold=singularity_threshold)
 
             if solution is not None and not self.is_near_singularity(solution, singularity_threshold):
                 print(f"Singularity avoided with {angle} rad rotation adjustment.")
@@ -638,12 +642,19 @@ class ArmTracIKSolver(TracIKSolver):
         all_quats = []
         for i in range(steps):
             all_points.append(positions[i])
-            # all_quats.append(orientations[i])
+            all_quats.append(orientations[i])
 
-        return all_points
+        return all_points, all_quats  # 返回路径点xyz, 四元数xyzw
 
-    def visualize_trajectory(self, positions: np.array):
-        """可视化笛卡尔空间轨迹"""
+    def visualize_trajectory(self, positions: np.array, orientations = None, step: int = 5, scale: float = 0.05):
+        """
+        可视化笛卡尔空间轨迹，支持方向标注
+        参数:
+        positions - Nx3数组, 轨迹点的XYZ坐标
+        orientations - Nx4数组, 轨迹点的四元数(XYZW格式)，可选
+        step - 方向箭头的绘制间隔（每隔几个点绘制一个）
+        scale - 方向箭头的缩放比例
+        """
         fig = plt.figure(figsize=(10, 8))
         ax = fig.add_subplot(111, projection="3d")
 
@@ -653,7 +664,35 @@ class ArmTracIKSolver(TracIKSolver):
         # 添加起点和终点标记
         ax.scatter(positions[0, 0], positions[0, 1], positions[0, 2], c="green", s=100, marker="o", edgecolors="k", label="Start")
         ax.scatter(positions[-1, 0], positions[-1, 1], positions[-1, 2], c="red", s=100, marker="*", edgecolors="k", label="End")
+        # 添加方向标注（如果提供了四元数）
+        if orientations is not None:
+            # 确保四元数数量与位置点匹配
+            if len(orientations) != len(positions):
+                raise ValueError("位置点和方向四元数数量不匹配")
 
+            # 每隔step个点绘制方向箭头
+            for i in range(0, len(positions), step):
+                pos = positions[i]
+                quat_xyzw = orientations[i]
+
+                # 创建旋转对象（使用XYZW格式）
+                rotation = R.from_quat(quat_xyzw)
+
+                # 获取坐标轴方向向量
+                x_axis = rotation.apply([scale, 0, 0])
+                y_axis = rotation.apply([0, scale, 0])
+                z_axis = rotation.apply([0, 0, scale])
+
+                # 绘制坐标轴
+                ax.quiver(pos[0], pos[1], pos[2],
+                        x_axis[0], x_axis[1], x_axis[2],
+                        color="r", linewidth=1.5, alpha=0.8)
+                ax.quiver(pos[0], pos[1], pos[2],
+                        y_axis[0], y_axis[1], y_axis[2],
+                        color="g", linewidth=1.5, alpha=0.8)
+                ax.quiver(pos[0], pos[1], pos[2],
+                        z_axis[0], z_axis[1], z_axis[2],
+                        color="b", linewidth=1.5, alpha=0.8)
         # 添加坐标轴
         ax.quiver(0, 0, 0, 0.1, 0, 0, color="r", lw=2, alpha=0.5, label="X-axis")
         ax.quiver(0, 0, 0, 0, 0.1, 0, color="g", lw=2, alpha=0.5, label="Y-axis")
@@ -704,7 +743,7 @@ if __name__ == "__main__":
     start_pose[:3, :3] = arm_left_kinematics.quat_to_rot_matrix(left_quat)
 
     end_pose = arm_left_kinematics.create_pose(right_pos, right_quat)
-    points = arm_left_kinematics.plan(start_pose, end_pose, 20, True, [1.0, 0.0, 1.0])
+    points, quats = arm_left_kinematics.plan(start_pose, end_pose, 20, True, [1.0, 0.0, 1.0])
 
     # 轨迹可视化
-    arm_left_kinematics.visualize_trajectory(np.array(points))
+    arm_left_kinematics.visualize_trajectory(np.array(points), np.array(quats))
