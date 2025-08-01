@@ -357,6 +357,48 @@ class ArmController:
         rospy.logwarn(f"left_true_error2_ = {left_true_error2_}, right_true_error2_ = {right_true_error2_}")
         return left_true_error2_ < self.joint_tolerance and right_true_error2_ < self.joint_tolerance
 
+    def move_dual_arm_by_xyz_tr2(self, left_target_pos, left_target_quat, right_target_pos, right_target_quat, steps=5, is_random=True, direction=[1., 0., 1.]):
+        # 分别计算左右臂的轨迹
+        # traj_left_points_ = self.arm_kinematics[True].generate_trajectory_by_dist(self.left_end_effector_pose, left_target_pos, self.tr_distance)
+        # traj_right_points_ = self.arm_kinematics[False].generate_trajectory_by_dist(self.right_end_effector_pose, right_target_pos, self.tr_distance)
+        left_start_pos_ = self.planner.create_pose(self.left_end_effector_pose, self.left_end_effector_quat)
+        left_end_pos_ = self.planner.create_pose(left_target_pos, left_target_quat)
+        right_start_pos_ = self.planner.create_pose(self.right_end_effector_pose, self.right_end_effector_quat)
+        right_end_pos_ = self.planner.create_pose(right_target_pos, right_target_quat)
+        # print("self.left_end_effector_pose = ", self.left_end_effector_pose)
+        # print("self.right_end_effector_pose = ", self.right_end_effector_pose)
+        traj_left_points_, traj_left_xyzw_ = self.planner.plan(left_start_pos_, left_end_pos_, steps, is_random, direction)
+        traj_right_points_, traj_right_xyzw_ = self.planner.plan(right_start_pos_, right_end_pos_, steps, is_random, direction)
+        traj_left_joints = []
+        traj_right_joints = []
+        for i in range(steps):
+            left_target_pos = traj_left_points_[i]
+            left_target_quat = [traj_left_xyzw_[i][3], traj_left_xyzw_[i][0], traj_left_xyzw_[i][1], traj_left_xyzw_[i][2]]
+            right_target_pos = traj_right_points_[i]
+            right_target_quat = [traj_right_xyzw_[i][3], traj_right_xyzw_[i][0], traj_right_xyzw_[i][1], traj_right_xyzw_[i][2]]
+            left_target_joint_, right_target_joint_ = self.ik_dual(left_target_pos, left_target_quat, self.dual_joint_positions[True], right_target_pos, right_target_quat, self.dual_joint_positions[False])
+            traj_left_joints.append(left_target_joint_)
+            traj_right_joints.append(right_target_joint_)
+            fk_left_xyz_, _, _ = self.arm_kinematics[True].forward_kinematics(left_target_joint_)
+            fk_right_xyz_, _, _ = self.arm_kinematics[False].forward_kinematics(right_target_joint_)
+            diff_left_xyz_ = np.linalg.norm(fk_left_xyz_ - traj_left_points_[i])
+            diff_right_xyz_ = np.linalg.norm(fk_right_xyz_ - traj_right_points_[i])
+            diff_left_ori_ = np.linalg.norm(left_target_quat - self.left_end_effector_quat)
+            diff_right_ori_ = np.linalg.norm(right_target_quat - self.right_end_effector_quat)
+            left_true_error2_ = np.linalg.norm(np.array(left_target_pos) - np.array(self.left_end_effector_pose))  # 左臂实际末端位置误差
+            right_true_error2_ = np.linalg.norm(np.array(right_target_pos) - np.array(self.right_end_effector_pose))  # 右臂实际末端位置误差
+            left_arm_move_status, right_arm_move_status = left_true_error2_ < self.joint_tolerance, right_true_error2_ < self.joint_tolerance
+            rospy.loginfo("Arm Move Success") if left_arm_move_status and right_arm_move_status else rospy.loginfo("Arm Move Failed")
+            # rospy.logwarn(f"fk_left_xyz_ = {fk_left_xyz_}, traj_left_points_[i] = {traj_left_points_[i]}")
+            # rospy.logwarn(f"fk_right_xyz_ = {fk_right_xyz_}, traj_right_points_[i] = {traj_right_points_[i]}")
+            rospy.logwarn(f"diff_left_xyz_ = {diff_left_xyz_}, diff_right_xyz_ = {diff_right_xyz_}")
+            rospy.logwarn(f"left_diff_ori_ = {diff_left_ori_}, right_diff_ori_ = {diff_right_ori_}")
+        for i in range(steps):
+            left_target_joint_, right_target_joint_ = traj_left_joints[i], traj_right_joints[i]
+            self.send_arms_cmd_pos(self.joint_names[True] + self.joint_names[False], list(left_target_joint_) + list(right_target_joint_), [self.joint_speed] * 14, [self.joint_current] * 14)
+            rospy.sleep(0.1)
+        return left_true_error2_ < self.joint_tolerance and right_true_error2_ < self.joint_tolerance
+
     def move_dual_arm_by_xyz_tr(self, left_target_pos, left_target_quat, right_target_pos, right_target_quat, steps=5, is_random=True, direction=[1., 0., 1.]):
         # 分别计算左右臂的轨迹
         # traj_left_points_ = self.arm_kinematics[True].generate_trajectory_by_dist(self.left_end_effector_pose, left_target_pos, self.tr_distance)

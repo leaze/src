@@ -224,7 +224,7 @@ class ArmTracIKSolver(TracIKSolver):
             # 标准化：0-1（越小越好，取倒数）
             max_dist = np.linalg.norm(self.ub - self.lb)
             continuity_score = 1.0 - min(1.0, joint_dist / max_dist)
-            scores.append(continuity_score * 0.4)  # 权重40%
+            scores.append(continuity_score * 0.7)  # 权重40%
         
         # 2. 任务空间精度评分
         valid, pos_err, rot_err = self.verify_pose(joints, target_pose)
@@ -232,7 +232,7 @@ class ArmTracIKSolver(TracIKSolver):
         pos_score = 1.0 - min(1.0, pos_err / 0.05)  # 假设0.1m为最大容忍误差
         # 旋转误差评分（0-1，越小越好）
         rot_score = 1.0 - min(1.0, rot_err / 0.5)  # 假设0.5rad为最大容忍误差
-        scores.append((pos_score * 0.7 + rot_score * 0.3) * 0.4)  # 权重40%
+        scores.append((pos_score * 0.6 + rot_score * 0.4) * 0.1)  # 权重40%
         
         # 3. 奇异性评分（最小奇异值）
         jac = self._compute_jacobian(joints)
@@ -244,6 +244,68 @@ class ArmTracIKSolver(TracIKSolver):
             scores.append(singularity_score * 0.2)  # 权重20%
         
         return sum(scores) / len(scores)  # 加权平均
+
+    # def _calculate_solution_score(self, joints, current_joints, target_pose):
+    #     """计算解的综合性评分 - 增加关节变化大小评分"""
+    #     scores = []
+    #     weights = []
+
+    #     # 1. 关节连续性评分（与当前位置的距离）
+    #     if current_joints is not None:
+    #         joint_dist = np.linalg.norm(joints - current_joints)
+    #         # 标准化：0-1（越小越好，取倒数）
+    #         max_dist = np.linalg.norm(self.ub - self.lb)
+    #         continuity_score = 1.0 - min(1.0, joint_dist / max_dist)
+    #         scores.append(continuity_score)
+    #         weights.append(0.2)  # 权重20%
+            
+    #         # +++ 新增：关节变化大小评分 +++
+    #         # 计算每个关节的变化量（绝对值）
+    #         joint_deltas = np.abs(joints - current_joints)
+    #         # 计算平均变化量并标准化
+    #         avg_delta = np.mean(joint_deltas)
+    #         max_delta = np.max(np.abs(self.ub - self.lb))
+    #         # 变化越小评分越高，使用指数衰减函数（e^-x）确保小变化得高分
+    #         # scale_factor = 0.2 确保合理的衰减速度（20%最大变化量对应0.37分）
+    #         scale_factor = max_delta * 0.2
+    #         delta_score = np.exp(-avg_delta / scale_factor)
+    #         scores.append(delta_score)
+    #         weights.append(0.2)  # 权重20%
+    #     else:
+    #         # 没有当前关节位置时，使用中性评分
+    #         scores.append(0.5)
+    #         weights.append(0.2)
+    #         scores.append(0.5)
+    #         weights.append(0.2)
+        
+    #     # 2. 任务空间精度评分
+    #     valid, pos_err, rot_err = self.verify_pose(joints, target_pose)
+    #     # 位置误差评分（0-1，越小越好）
+    #     pos_score = 1.0 - min(1.0, pos_err / 0.05)  # 假设0.1m为最大容忍误差
+    #     # 旋转误差评分（0-1，越小越好）
+    #     rot_score = 1.0 - min(1.0, rot_err / 0.5)  # 假设0.5rad为最大容忍误差
+    #     task_score = (pos_score * 0.6 + rot_score * 0.4)
+    #     scores.append(task_score)
+    #     weights.append(0.4)  # 权重40%
+        
+    #     # 3. 奇异性评分（最小奇异值）
+    #     jac = self._compute_jacobian(joints)
+    #     if jac is not None:
+    #         _, s, _ = np.linalg.svd(jac)
+    #         min_singular = np.min(s)
+    #         # 归一化奇异值（0-1，越大越好）
+    #         singularity_score = min(1.0, min_singular / 0.2)  # 假设0.2为良好阈值
+    #         scores.append(singularity_score)
+    #         weights.append(0.2)  # 权重20%
+    #     else:
+    #         # 雅可比计算失败时使用最低分
+    #         scores.append(0.0)
+    #         weights.append(0.2)
+        
+    #     # 计算加权总分
+    #     weighted_sum = sum(s * w for s, w in zip(scores, weights))
+    #     total_weight = sum(weights)
+    #     return weighted_sum / total_weight
 
     def _is_out_of_bounds(self, joints):
         """检查关节是否超出限位"""
@@ -313,14 +375,14 @@ class ArmTracIKSolver(TracIKSolver):
         scores = []
         for sol in solutions:
             # 关节空间距离（标准化）
-            joint_dist = np.linalg.norm(sol - current_joints) / len(sol)
+            joint_dist = np.linalg.norm(sol - current_joints) / len(sol) * 1.2
             
             # 操作空间误差（标准化）
             _, pos_err, rot_err = self.verify_pose(sol, target_pose)
             task_err = pos_err * 0.6 + rot_err * 0.4  # 加权误差
             
             # 综合评分（越小越好）
-            scores.append(0.6 * joint_dist + 0.4 * task_err)
+            scores.append(0.7 * joint_dist + 0.3 * task_err)
         return solutions[np.argmin(scores)]
 
     def verify_pose(self, joints, target_pose, pos_tol=0.01, rot_tol=0.1):
@@ -455,6 +517,13 @@ class ArmTracIKSolver(TracIKSolver):
             ee_pose[:3, :3] = self.quat_to_rot_matrix(target_quaternion)
         if initial_angles is not None and len(initial_angles) == 7:
             initial_angles = np.concatenate(([0], initial_angles))
+            solution = self.damped_least_squares_ik(
+            ee_pose, 
+            initial_angles=np.concatenate(([0], initial_angles)),
+            lambda_val=0.05  # 中等阻尼系数
+        )
+            if solution is not None:
+                return solution[1:]  # 返回有效的关节角
         # if initial_angles is not None:
         #     self.current_joints = np.concatenate(([0], initial_angles))
         solution = self.move_to_pose(ee_pose, self.max_attempts, self.singularity_threshold)

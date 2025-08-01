@@ -114,7 +114,7 @@ class RobotController:
         right_target_pos_ = [0.15371069, -0.19029899, -0.06846677]
         right_target_quat_ = [0.645778878918554, 0.5312803574078042, -0.37486812155046495, -0.40023082442580193]
         # # 发送消息
-        insert_wedge_success = self.arm_controller.move_dual_arm_by_xyz_tr(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_, steps=6, is_random=False, direction=[0.0, 0.0, 2.5])
+        insert_wedge_success = self.arm_controller.move_dual_arm_by_xyz_tr2(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_, steps=6, is_random=False, direction=[0.0, 0.0, 2.5])
         # rospy.sleep(1)
         # for i in range(5):
         #     robot_controller.arm_controller.move_dual_forward(0.05)

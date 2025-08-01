@@ -203,6 +203,8 @@ planning_scene.add_object(collision_object)
 
 ## 6 IK实现思路
 
+<https://bbs.realman-robotics.cn/question/326.html>
+
 ### arm_solver逆解算
 
 ![ik_solver](../data/img/ik_solver.png)
