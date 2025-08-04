@@ -245,68 +245,6 @@ class ArmTracIKSolver(TracIKSolver):
         
         return sum(scores) / len(scores)  # 加权平均
 
-    # def _calculate_solution_score(self, joints, current_joints, target_pose):
-    #     """计算解的综合性评分 - 增加关节变化大小评分"""
-    #     scores = []
-    #     weights = []
-
-    #     # 1. 关节连续性评分（与当前位置的距离）
-    #     if current_joints is not None:
-    #         joint_dist = np.linalg.norm(joints - current_joints)
-    #         # 标准化：0-1（越小越好，取倒数）
-    #         max_dist = np.linalg.norm(self.ub - self.lb)
-    #         continuity_score = 1.0 - min(1.0, joint_dist / max_dist)
-    #         scores.append(continuity_score)
-    #         weights.append(0.2)  # 权重20%
-            
-    #         # +++ 新增：关节变化大小评分 +++
-    #         # 计算每个关节的变化量（绝对值）
-    #         joint_deltas = np.abs(joints - current_joints)
-    #         # 计算平均变化量并标准化
-    #         avg_delta = np.mean(joint_deltas)
-    #         max_delta = np.max(np.abs(self.ub - self.lb))
-    #         # 变化越小评分越高，使用指数衰减函数（e^-x）确保小变化得高分
-    #         # scale_factor = 0.2 确保合理的衰减速度（20%最大变化量对应0.37分）
-    #         scale_factor = max_delta * 0.2
-    #         delta_score = np.exp(-avg_delta / scale_factor)
-    #         scores.append(delta_score)
-    #         weights.append(0.2)  # 权重20%
-    #     else:
-    #         # 没有当前关节位置时，使用中性评分
-    #         scores.append(0.5)
-    #         weights.append(0.2)
-    #         scores.append(0.5)
-    #         weights.append(0.2)
-        
-    #     # 2. 任务空间精度评分
-    #     valid, pos_err, rot_err = self.verify_pose(joints, target_pose)
-    #     # 位置误差评分（0-1，越小越好）
-    #     pos_score = 1.0 - min(1.0, pos_err / 0.05)  # 假设0.1m为最大容忍误差
-    #     # 旋转误差评分（0-1，越小越好）
-    #     rot_score = 1.0 - min(1.0, rot_err / 0.5)  # 假设0.5rad为最大容忍误差
-    #     task_score = (pos_score * 0.6 + rot_score * 0.4)
-    #     scores.append(task_score)
-    #     weights.append(0.4)  # 权重40%
-        
-    #     # 3. 奇异性评分（最小奇异值）
-    #     jac = self._compute_jacobian(joints)
-    #     if jac is not None:
-    #         _, s, _ = np.linalg.svd(jac)
-    #         min_singular = np.min(s)
-    #         # 归一化奇异值（0-1，越大越好）
-    #         singularity_score = min(1.0, min_singular / 0.2)  # 假设0.2为良好阈值
-    #         scores.append(singularity_score)
-    #         weights.append(0.2)  # 权重20%
-    #     else:
-    #         # 雅可比计算失败时使用最低分
-    #         scores.append(0.0)
-    #         weights.append(0.2)
-        
-    #     # 计算加权总分
-    #     weighted_sum = sum(s * w for s, w in zip(scores, weights))
-    #     total_weight = sum(weights)
-    #     return weighted_sum / total_weight
-
     def _is_out_of_bounds(self, joints):
         """检查关节是否超出限位"""
         return np.any(joints < self.lb) or np.any(joints > self.ub)
@@ -412,54 +350,176 @@ class ArmTracIKSolver(TracIKSolver):
 
         return pos_error < pos_tol and rot_error < rot_tol, pos_error, rot_error
 
-    def damped_least_squares_ik(self, target_pose, initial_joints, lambda_val=0.1, max_iter=50, tol=1e-4):
+    # def damped_least_squares_ik(self, target_pose, initial_joints, lambda_val=0.1, max_iter=50, tol=1e-4):
+    #     """
+    #     使用阻尼最小二乘法求解逆运动学
+    #     :param target_pose: 目标位姿
+    #     :param initial_joints: 初始关节角
+    #     :param lambda_val: 阻尼系数
+    #     :param max_iter: 最大迭代次数
+    #     :param tol: 收敛容差
+    #     :return: 关节角
+    #     """
+    #     if initial_joints is None:
+    #         initial_joints = self.joint_mid.copy()
+
+    #     joints = initial_joints.copy()
+
+    #     for i in range(max_iter):
+    #         # 计算当前位姿
+    #         current_pose = self.fk(joints)
+    #         if current_pose is None:
+    #             break
+
+    #         # 计算位姿误差
+    #         pos_error = target_pose[:3, 3] - current_pose[:3, 3]
+    #         r_current = R.from_matrix(current_pose[:3, :3])
+    #         r_target = R.from_matrix(target_pose[:3, :3])
+    #         rot_error = (r_target * r_current.inv()).as_rotvec()
+    #         error = np.hstack([pos_error, rot_error])
+
+    #         # 检查收敛
+    #         if np.linalg.norm(error) < tol:
+    #             break
+
+    #         # 计算雅可比
+    #         jac = self._compute_jacobian(joints)
+    #         if jac is None:
+    #             break
+
+    #         # 计算阻尼最小二乘解
+    #         jac_t = jac.T
+    #         jjt = jac @ jac_t
+    #         damping = lambda_val * lambda_val * np.eye(6)
+    #         delta_theta = jac_t @ np.linalg.solve(jjt + damping, error)
+
+    #         # 更新关节角
+    #         joints += delta_theta
+    #         joints = np.clip(joints, self.lb, self.ub)
+
+    #     return joints
+
+    def damped_least_squares_ik(self, target_pose, initial_joints, lambda_val=0.05, max_iter=50, tol=1e-4, adaptive_lambda=True):
         """
-        使用阻尼最小二乘法求解逆运动学
-        :param target_pose: 目标位姿
+        使用阻尼最小二乘法求解逆运动学，带自适应步长控制
+        :param target_pose: 目标位姿(4x4齐次矩阵)
         :param initial_joints: 初始关节角
-        :param lambda_val: 阻尼系数
+        :param lambda_val: 基础阻尼系数
         :param max_iter: 最大迭代次数
         :param tol: 收敛容差
+        :param adaptive_lambda: 是否启用自适应阻尼系数
         :return: 关节角
         """
         if initial_joints is None:
             initial_joints = self.joint_mid.copy()
-
+        
         joints = initial_joints.copy()
-
+        prev_error = float('inf')
+        adaptive_lambda = lambda_val  # 初始阻尼值
+        
+        # 记录最优解
+        best_joints = joints.copy()
+        best_error = float('inf')
+        
         for i in range(max_iter):
             # 计算当前位姿
             current_pose = self.fk(joints)
             if current_pose is None:
-                break
-
+                # 使用之前的最佳解
+                return best_joints if best_error < float('inf') else initial_joints
+            
             # 计算位姿误差
             pos_error = target_pose[:3, 3] - current_pose[:3, 3]
             r_current = R.from_matrix(current_pose[:3, :3])
             r_target = R.from_matrix(target_pose[:3, :3])
             rot_error = (r_target * r_current.inv()).as_rotvec()
-            error = np.hstack([pos_error, rot_error])
-
+            error_vec = np.hstack([pos_error, rot_error])
+            error_norm = np.linalg.norm(error_vec)
+            
+            # 更新最优解
+            if error_norm < best_error:
+                best_joints = joints.copy()
+                best_error = error_norm
+            
             # 检查收敛
-            if np.linalg.norm(error) < tol:
+            if error_norm < tol:
                 break
-
-            # 计算雅可比
+            
+            # 计算雅可比矩阵
             jac = self._compute_jacobian(joints)
-            if jac is None:
-                break
-
+            if jac is None or np.linalg.matrix_rank(jac) < 6:
+                # 雅可比奇异，增加阻尼
+                adaptive_lambda *= 2
+                continue
+            
+            # 自适应阻尼系数（基于雅可比条件数）
+            if adaptive_lambda:
+                _, s, _ = np.linalg.svd(jac)
+                cond = np.max(s) / np.min(s)
+                adaptive_lambda = lambda_val * max(1.0, min(cond / 100, 5.0))
+            
             # 计算阻尼最小二乘解
             jac_t = jac.T
             jjt = jac @ jac_t
-            damping = lambda_val * lambda_val * np.eye(6)
-            delta_theta = jac_t @ np.linalg.solve(jjt + damping, error)
-
-            # 更新关节角
-            joints += delta_theta
+            damping = adaptive_lambda * adaptive_lambda * np.eye(6)
+            try:
+                # 尝试直接求解
+                delta_theta = jac_t @ np.linalg.solve(jjt + damping, error_vec)
+            except np.linalg.LinAlgError:
+                # 矩阵奇异，使用伪逆
+                delta_theta = jac_t @ np.linalg.pinv(jjt + damping) @ error_vec
+            
+            # 自适应步长控制（回溯直线搜索）
+            step_size = 1.0
+            best_step_size = step_size
+            min_step_error = error_norm
+            
+            # 尝试最多5个步长
+            for _ in range(5):
+                new_joints = joints + step_size * delta_theta
+                new_joints = np.clip(new_joints, self.lb, self.ub)
+                
+                # 计算新位置的误差
+                new_pose = self.fk(new_joints)
+                if new_pose is None:
+                    step_size *= 0.5
+                    continue
+                    
+                new_pos_error = target_pose[:3, 3] - new_pose[:3, 3]
+                new_rot_error = (r_target * R.from_matrix(new_pose[:3, :3]).inv()).as_rotvec()
+                new_error = np.linalg.norm(np.hstack([new_pos_error, new_rot_error]))
+                
+                # 检查是否改善
+                if new_error < min_step_error:
+                    min_step_error = new_error
+                    best_step_size = step_size
+                
+                # 如果已经显著改善或步长太小，则退出
+                if new_error < error_norm * 0.9 or step_size < 0.1:
+                    break
+                    
+                step_size *= 0.7  # 减小步长
+            
+            # 使用最佳步长更新关节
+            joints += best_step_size * delta_theta
             joints = np.clip(joints, self.lb, self.ub)
-
-        return joints
+            
+            # 检查误差变化率
+            error_reduction = prev_error - min_step_error
+            if error_reduction < tol * 0.1 and i > 10:
+                break
+            prev_error = min_step_error
+        
+        # 验证最终解
+        final_pose = self.fk(joints)
+        if final_pose is not None:
+            final_pos_error = np.linalg.norm(target_pose[:3, 3] - final_pose[:3, 3])
+            final_rot_error = (r_target * R.from_matrix(final_pose[:3, :3]).inv()).magnitude()
+            if final_pos_error < 0.01 and final_rot_error < 0.1:
+                return joints
+        
+        # 如果最终解不理想，返回最佳中间解
+        return best_joints
 
     def mat2quat_tf(self, matrix):
         """旋转矩阵转四元数（保持[w, x, y, z]格式）"""
@@ -517,15 +577,9 @@ class ArmTracIKSolver(TracIKSolver):
             ee_pose[:3, :3] = self.quat_to_rot_matrix(target_quaternion)
         if initial_angles is not None and len(initial_angles) == 7:
             initial_angles = np.concatenate(([0], initial_angles))
-            solution = self.damped_least_squares_ik(
-            ee_pose, 
-            initial_angles=np.concatenate(([0], initial_angles)),
-            lambda_val=0.05  # 中等阻尼系数
-        )
-            if solution is not None:
-                return solution[1:]  # 返回有效的关节角
-        # if initial_angles is not None:
-        #     self.current_joints = np.concatenate(([0], initial_angles))
+        solution = self.damped_least_squares_ik(ee_pose, initial_joints=initial_angles, lambda_val=0.01)
+        if solution is not None:
+            return solution[1:]  # 返回有效的关节角
         solution = self.move_to_pose(ee_pose, self.max_attempts, self.singularity_threshold)
         return solution[1:] if solution is not None else initial_angles
 

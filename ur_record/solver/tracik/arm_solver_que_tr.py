@@ -5,7 +5,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from tracikpy import TracIKSolver
 import matplotlib.pyplot as plt
 import numpy as np
-from arm_solver_que import ArmTracIKSolver
+from arm_solver_que_continue import ArmTracIKSolver
 
 
 
@@ -22,16 +22,21 @@ if __name__ == "__main__":
     # 轨迹规划
     start_pose = arm_left_kinematics.create_pose(start_pos, start_quat)
     end_pose = arm_left_kinematics.create_pose(end_pos, end_quat)
-    points, quats = arm_left_kinematics.plan(start_pose, end_pose, 10, False, [0.0, 0.0, 2.0])
-
+    points, quats = arm_left_kinematics.plan(start_pose, end_pose, 10, False, [1.0, 0.0, 1.0])
+    diff_sum = 0
     # 正向运动学验证
-    for point in points:
+    for i in range(len(points)):
+        point = points[i]
+        start_quat = quats[i]
         # print("point = ", point)
         ik_joints = arm_left_kinematics.inverse_kinematics(point, start_quat)
         # print("ik_joints = ", list(ik_joints))
-        fk_xyz_, _, _ = arm_left_kinematics.forward_kinematics(ik_joints)
+        fk_xyz_, _, fk_ori_ = arm_left_kinematics.forward_kinematics(ik_joints)
         # print("fk_xyz_ = ", list(fk_xyz_))
+        print("fk_ori_ = ", list(fk_ori_))
         diff_ = np.linalg.norm(fk_xyz_ - point)
-        print("diff_ = ", diff_)
+        # print("diff_ = ", diff_)
+        diff_sum += diff_
     # 轨迹可视化
-    arm_left_kinematics.visualize_trajectory(np.array(points), np.array(quats))
+    print("diff_sum = ", diff_sum)
+    arm_left_kinematics.visualize_trajectory(np.array(points), np.array(quats), 1)

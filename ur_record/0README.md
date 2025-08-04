@@ -232,11 +232,16 @@ planning_scene.add_object(collision_object)
   + [x] 2.3 控制双臂同步运动到指定位置
   + [ ] 2.4 控制夹爪移动到纸箱顶点
   + [x] 2.5 控制双臂抬起纸箱
-+ [ ] 3 调度
-  + [ ] 3.1 导航到指定位置 nav_rosbridge类的接口
++ [x] 3 调度
+  + [x] 3.1 导航到指定位置 nav_rosbridge类的接口
 + [ ] 4 正逆解算优化
   + [ ] 4.1 避障 <https://yuanbao.tencent.com/chat/naQivTmsDa/1a29c449-7aec-4e23-92cc-ce8b33a20d01>
   + [x] 4.2 奇异值优化 <https://chat.deepseek.com/a/chat/s/5d8960b1-2550-4fb1-b334-e9b5f464230c>
   + [x] 4.3 双臂协同轨迹优化 <https://yuanbao.tencent.com/chat/naQivTmsDa/faaa8bd6-973b-4648-a58a-5d403b7bbe15>
   + [ ] 4.4 PID / LQR 位控
   + [ ] 4.5 力控
++ [ ] 5 ROS2 控制
+  + [x] 5.1 重新反工ROS1代码
+  + [ ] 5.2 上料任务
++ [ ] 6 联调
+  + [ ] 6.1 获取视觉反馈
