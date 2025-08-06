@@ -11,6 +11,7 @@
 from controllers.arm_controller import ArmController
 from mmodules.inspire_controller import InspireController
 from sensors.arm_6dof import Arm6Dof
+from sensors.orrb_camera import OrrbCamera
 import numpy as np
 import rospy
 import math
@@ -21,6 +22,7 @@ class RobotController:
         self.arm_controller = ArmController()
         self.hand_controller = InspireController()
         self.arm_6dof = Arm6Dof()
+        self.orrb_camera = OrrbCamera()
         self.current_state = None
         self.left_init_joints = [0.0, 0.15, 0.0, -0.0, 0.0, 0.0, -0.0]
         self.right_init_joints = [0.0, -0.15, 0.0, -0.0, 0.0, 0.0, -0.0]
@@ -28,6 +30,11 @@ class RobotController:
 
     def recveive_command(self):
         # 接收指令
+        while True:
+            if self.orrb_camera.flag_wedge:
+                world_xyz_, world_quat_ = self.orrb_camera.get_current_pose()
+                print(world_xyz_)
+                return world_xyz_, world_quat_
         pass
 
     def location_wedge(self):
@@ -161,6 +168,13 @@ class RobotController:
 
     def place_box(self):
         # 置纸箱的逻辑
+        left_target_pos_ = [0.15371069, 0.3863358589574437, -0.06846677]
+        left_target_quat_ = [0.6394114697766845, -0.6273574282828561, -0.35111895992791475, 0.272563947497611]
+
+        right_target_pos_ = [0.15371069, -0.38635154602451355, -0.06846677]
+        right_target_quat_ = [0.639313586157058, 0.6276110627003378, -0.35094137894395117, -0.2724383252702758]
+        # # 发送消息
+        insert_wedge_success = self.arm_controller.move_dual_arm_by_xyz_tr2(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_, steps=10, is_random=False, direction=[1.0, 0.0, 1.0])
         pass
 
     def lift_box(self, distance):
@@ -168,12 +182,12 @@ class RobotController:
         return self.arm_controller.move_dual_up(distance)
 
     def get_arm_state(self):
-        print("left_joint_positions = ", list(self.arm_controller.left_joint_positions))
-        print("left_end_effector_pose = ", list(self.arm_controller.left_end_effector_pose))
-        print("left_end_effector_quat = ", list(self.arm_controller.left_end_effector_quat))
-        print("right_joint_positions = ", list(self.arm_controller.right_joint_positions))
-        print("right_end_effector_pose = ", list(self.arm_controller.right_end_effector_pose))
-        print("right_end_effector_quat = ", list(self.arm_controller.right_end_effector_quat))
+        print("left_joint_positions =", list(self.arm_controller.left_joint_positions))
+        print("left_end_effector_pose =", list(self.arm_controller.left_end_effector_pose))
+        print("left_end_effector_quat =", list(self.arm_controller.left_end_effector_quat))
+        print("right_joint_positions =", list(self.arm_controller.right_joint_positions))
+        print("right_end_effector_pose =", list(self.arm_controller.right_end_effector_pose))
+        print("right_end_effector_quat =", list(self.arm_controller.right_end_effector_quat))
 
     def run(self):
         grab_wedge_success = self.grab_wedge() if hand_init_success and arm_init_success else False
@@ -182,22 +196,26 @@ class RobotController:
         insert_wedge_success = self.insert_wedge() if move_wedge_success else False
 
     def test(self):
-        # 抓取楔子
-        self.grab_wedge()
-        # 抬起楔子
-        # self.lift_wedge()
-        # 移动到纸箱前
-        # self.move_wedge()
         # 插入楔子
-        # self.insert_wedge()
+        left_target_pos_ = [0.32404316, 0.1997382, 0.00859038]
+        left_target_quat_ = [0.65053061, -0.52448355, -0.37982903, 0.39680832]
+
+        right_target_pos_ = [0.32400525, -0.19905013, 0.00859038]
+        right_target_quat_ = [0.64999305, 0.52478635, -0.37940189, -0.39769653]
+        # 发送消息
+        insert_wedge_success = self.arm_controller.move_dual_arm_by_xyz(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
+        self.get_arm_state()
+        
 
 if __name__ == "__main__":
     rospy.init_node("RobotControllerNode")
     robot_controller = RobotController()
     # robot_controller.get_arm_state()
-    for _ in range(1):
-        hand_init_success = robot_controller.hand_controller.init_hand_status()
-        move_left_status = robot_controller.arm_controller.rotate_joint([-0.0, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0], [-0.0, -0.2, 0.0, 0.0, 0.0, 0.0, 0.0])
-        arm_init_success = robot_controller.arm_controller.init_arm_status()
-        robot_controller.insert_wedge()
+    hand_init_success = robot_controller.hand_controller.init_hand_status()
+    move_left_status = robot_controller.arm_controller.rotate_joint([-0.0, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0], [-0.0, -0.2, 0.0, 0.0, 0.0, 0.0, 0.0])
+    arm_init_success = robot_controller.arm_controller.init_arm_status()
+    # robot_controller.insert_wedge()
+    robot_controller.grab_box()
+    robot_controller.place_box()
+    # robot_controller.test()
     print("Service test end")

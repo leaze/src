@@ -399,7 +399,7 @@ class ArmTracIKSolver(TracIKSolver):
 
     #     return joints
 
-    def damped_least_squares_ik(self, target_pose, initial_joints, lambda_val=0.05, max_iter=50, tol=1e-4, adaptive_lambda=True):
+    def damped_least_squares_ik(self, target_pose, initial_joints, lambda_val=0.5, max_iter=50, tol=1e-4, adaptive_lambda=True):
         """
         使用阻尼最小二乘法求解逆运动学，带自适应步长控制
         :param target_pose: 目标位姿(4x4齐次矩阵)
@@ -577,7 +577,7 @@ class ArmTracIKSolver(TracIKSolver):
             ee_pose[:3, :3] = self.quat_to_rot_matrix(target_quaternion)
         if initial_angles is not None and len(initial_angles) == 7:
             initial_angles = np.concatenate(([0], initial_angles))
-        solution = self.damped_least_squares_ik(ee_pose, initial_joints=initial_angles, lambda_val=0.01)
+        solution = self.damped_least_squares_ik(ee_pose, initial_joints=initial_angles, lambda_val=0.5)
         if solution is not None:
             return solution[1:]  # 返回有效的关节角
         solution = self.move_to_pose(ee_pose, self.max_attempts, self.singularity_threshold)

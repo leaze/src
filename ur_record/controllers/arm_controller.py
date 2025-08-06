@@ -24,7 +24,7 @@ import threading
 import rospy
 import math
 import time
-from solver.tracik.arm_solver_que import ArmTracIKSolver
+from solver.tracik.arm_solver_que_continue import ArmTracIKSolver
 from solver.mix.my_solver import MySolver
 from controllers.pid_controller import PIDController as PID
 from trajectory.trajectory import TrajectoryPlanner
@@ -40,9 +40,11 @@ class ArmController:
         self.planner = TrajectoryPlanner()
         self.arm_kinematics = [self.arm_right_kinematics, self.arm_left_kinematics]
         self.mirror_ls = [1, -1, -1, 1, -1, 1, -1]
+        self.left_init_joints = None
+        self.right_init_joints = None
         # 控制器参数
-        self.joint_speed = rospy.get_param("~joint_speed", 10)  # rpm
-        self.joint_current = rospy.get_param("~joint_current", 5.0)  # A
+        self.joint_speed = rospy.get_param("~joint_speed", 15)  # rpm
+        self.joint_current = rospy.get_param("~joint_current", 8.0)  # A
         self.joint_tolerance = rospy.get_param("~joint_tolerance", 0.01)  # rad
         self.tr_distance = rospy.get_param("~tr_distance", 0.05)  # m
         self.tr_point_time = rospy.get_param("~tr_point_time", min(0.2, 2 * math.pi / self.joint_speed))  # s
@@ -347,7 +349,12 @@ class ArmController:
     def move_dual_arm_by_xyz(self, left_target_pos, left_target_quat, right_target_pos, right_target_quat):
         # left_target_joint_ = self.arm_kinematics[True].inverse_kinematics(left_target_pos, left_target_quat, self.dual_joint_positions[True])
         # right_target_joint_ = self.arm_kinematics[False].inverse_kinematics(right_target_pos, right_target_quat, self.dual_joint_positions[False])
-        left_target_joint_, right_target_joint_ = self.ik_dual(left_target_pos, left_target_quat, self.dual_joint_positions[True], right_target_pos, right_target_quat, self.dual_joint_positions[False])
+        print("self.dual_joint_positions[True] = ", self.dual_joint_positions[True])
+        print("self.dual_joint_positions[False] = ", self.dual_joint_positions[False])
+        # left_target_joint_, right_target_joint_ = self.ik_dual(left_target_pos, left_target_quat, self.dual_joint_positions[True], right_target_pos, right_target_quat, self.dual_joint_positions[False])
+        print("self.left_init_joints = ", self.left_init_joints)
+        left_target_joint_, right_target_joint_ = self.ik_dual(left_target_pos, left_target_quat, self.left_init_joints, right_target_pos, right_target_quat, self.right_init_joints)
+        self.left_init_joints, self.right_init_joints = left_target_joint_, right_target_joint_
         self.send_arms_cmd_pos_service(self.joint_names[True] + self.joint_names[False], list(left_target_joint_) + list(right_target_joint_), [self.joint_speed] * 14, [self.joint_current] * 14)
         # rospy.sleep(3.0)
         left_true_error2_ = np.linalg.norm(np.array(left_target_pos) - np.array(self.left_end_effector_pose))  # 左臂实际末端位置误差
@@ -375,24 +382,28 @@ class ArmController:
             left_target_pos = traj_left_points_[i]
             left_target_quat = [traj_left_xyzw_[i][3], traj_left_xyzw_[i][0], traj_left_xyzw_[i][1], traj_left_xyzw_[i][2]]
             right_target_pos = traj_right_points_[i]
-            rospy.logerr(f"right_target_pos = {left_target_quat}")
+            # rospy.logwarn(f"right_target_pos = {left_target_quat}")
             right_target_quat = [traj_right_xyzw_[i][3], traj_right_xyzw_[i][0], traj_right_xyzw_[i][1], traj_right_xyzw_[i][2]]
-            left_target_joint_, right_target_joint_ = self.ik_dual(left_target_pos, left_target_quat, self.dual_joint_positions[True], right_target_pos, right_target_quat, self.dual_joint_positions[False])
-            # left_target_joint_, right_target_joint_ = self.ik_dual(left_target_pos, left_target_quat, None, right_target_pos, right_target_quat, None)
+            # left_target_joint_, right_target_joint_ = self.ik_dual(left_target_pos, left_target_quat, self.dual_joint_positions[True], right_target_pos, right_target_quat, self.dual_joint_positions[False])
+            left_target_joint_, right_target_joint_ = self.ik_dual(left_target_pos, left_target_quat, None, right_target_pos, right_target_quat, None)
+            # left_target_joint_, right_target_joint_ = self.ik_dual(left_target_pos, left_target_quat, self.left_init_joints, right_target_pos, right_target_quat, self.right_init_joints)
+            self.left_init_joints, self.right_init_joints = left_target_joint_, right_target_joint_
             traj_left_joints.append(left_target_joint_)
             traj_right_joints.append(right_target_joint_)
-            fk_left_xyz_, _, _ = self.arm_kinematics[True].forward_kinematics(left_target_joint_)
-            fk_right_xyz_, _, _ = self.arm_kinematics[False].forward_kinematics(right_target_joint_)
+            fk_left_xyz_, _, fk_left_ori_ = self.arm_kinematics[True].forward_kinematics(left_target_joint_)
+            fk_right_xyz_, _, fk_right_ori_ = self.arm_kinematics[False].forward_kinematics(right_target_joint_)
             diff_left_xyz_ = np.linalg.norm(fk_left_xyz_ - traj_left_points_[i])
             diff_right_xyz_ = np.linalg.norm(fk_right_xyz_ - traj_right_points_[i])
-            diff_left_ori_ = np.linalg.norm(left_target_quat - self.left_end_effector_quat)
-            diff_right_ori_ = np.linalg.norm(right_target_quat - self.right_end_effector_quat)
+            diff_left_ori_ = np.linalg.norm(left_target_quat - fk_left_ori_)
+            diff_right_ori_ = np.linalg.norm(right_target_quat - fk_right_ori_)
             left_true_error2_ = np.linalg.norm(np.array(left_target_pos) - np.array(self.left_end_effector_pose))  # 左臂实际末端位置误差
             right_true_error2_ = np.linalg.norm(np.array(right_target_pos) - np.array(self.right_end_effector_pose))  # 右臂实际末端位置误差
             left_arm_move_status, right_arm_move_status = left_true_error2_ < self.joint_tolerance, right_true_error2_ < self.joint_tolerance
             rospy.loginfo("Arm Move Success") if left_arm_move_status and right_arm_move_status else rospy.loginfo("Arm Move Failed")
             # rospy.logwarn(f"fk_left_xyz_ = {fk_left_xyz_}, traj_left_points_[i] = {traj_left_points_[i]}")
+            # rospy.logwarn(f"fk_left_ori_ = {fk_left_ori_}, left_target_quat = {left_target_quat}")
             # rospy.logwarn(f"fk_right_xyz_ = {fk_right_xyz_}, traj_right_points_[i] = {traj_right_points_[i]}")
+            # rospy.logwarn(f"fk_right_ori_ = {fk_right_ori_}, right_target_quat = {right_target_quat}")
             rospy.logwarn(f"diff_left_xyz_ = {diff_left_xyz_}, diff_right_xyz_ = {diff_right_xyz_}")
             rospy.logwarn(f"left_diff_ori_ = {diff_left_ori_}, right_diff_ori_ = {diff_right_ori_}")
         for i in range(steps):
