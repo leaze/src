@@ -339,11 +339,12 @@ class ArmController:
             self.send_arms_cmd_pos_service(self.joint_names[is_left], tr_, speeds, currents)
 
     def move_single_arm_by_xyz(self, is_left: bool, target_pos: np.ndarray, target_quat: np.ndarray):
+        print("self.dual_joint_positions[is_left]", self.dual_joint_positions[is_left])
         left_target_joint_ = self.arm_kinematics[is_left].inverse_kinematics(target_pos, target_quat, self.dual_joint_positions[is_left])
         self.send_arms_cmd_pos(self.joint_names[is_left], left_target_joint_, [self.joint_speed] * 7, [self.joint_current] * 7)
         rospy.sleep(2.0)
         joint_error_ = np.linalg.norm(np.array(self.dual_joint_positions[is_left]) - np.array(left_target_joint_))
-        rospy.loginfo(f"Arm Initialization Status: {joint_error_ < self.joint_tolerance}, dual joint error: {joint_error_:.4f}")
+        rospy.loginfo(f"Arm Initialization Status: {joint_error_ < self.joint_tolerance}, Single joint error: {joint_error_:.4f}")
         return joint_error_ < self.joint_tolerance
 
     def move_dual_arm_by_xyz(self, left_target_pos, left_target_quat, right_target_pos, right_target_quat):

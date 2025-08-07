@@ -28,34 +28,38 @@ class Trans:
             ]
         )
 
-    def rpy_to_quaternions(self, roll: float, pitch: float, yaw: float, mode="xyzw"):
+    # def rpy_to_quaternions(self, roll: float, pitch: float, yaw: float, in_wxyz="wxyz", use_rad=True):
+    def rpy_to_quaternions(self, rpy, in_wxyz="wxyz", use_rad=True):
         """将欧拉角(roll, pitch, yaw)转换为四元数。
         参数:
             roll: 绕X轴的旋转角度(以度为单位)
             pitch: 绕Y轴的旋转角度(以度为单位)
             yaw: 绕Z轴的旋转角度(以度为单位)
-            mode: 返回四元数的顺序，默认为"xyzw"，可选"wxyz"
+            in_wxyz: 返回四元数的顺序，默认为"wxyz", 否则"xyzw"
+            use_rad: 输入的roll, pitch, yaw参数是否为弧度, 否则为角度
         返回:
             四元数, 格式为numpy数组。
         """
         # 生成旋转对象（以XYZ欧拉角顺序）
-        r = R.from_euler("xyz", [np.deg2rad(roll), np.deg2rad(pitch), np.deg2rad(yaw)])
+        roll, pitch, yaw = rpy
+        r = R.from_euler("xyz", [roll, pitch, yaw]) if use_rad else R.from_euler("xyz", [np.deg2rad(roll), np.deg2rad(pitch), np.deg2rad(yaw)])
         # 以xyzw顺序获取四元数
         xyzw = r.as_quat()  # 返回顺序是xyzw
         # 转换为wxyz顺序
         wxyz = [xyzw[3], xyzw[0], xyzw[1], xyzw[2]]
-        if mode == "wxyz":
+        if in_wxyz == "wxyz":
             return np.array(wxyz)
         else:
             return xyzw
 
-    def quaternion_to_rpy(self, quaternion, order="xyzw"):
+    def quaternion_to_rpy(self, quaternion, order="xyzw", use_rad=True):
         """
-        将四元数转换为RPY角。
+        将四元数转换为RPY角(弧度或角度)
 
         :param quaternion: 四元数, 长度为4的数组或列表
         :param order: 四元数的顺序，'xyzw'或'wxyz'
-        :return: 以弧度表示的RPY角(滚转、俯仰、偏航)
+        :param use_rad: 若为True, 返回弧度; 否则返回角度
+        :return: 以弧度或角度表示的RPY角(滚转、俯仰、偏航)
         """
         if order == "xyzw":
             q = quaternion
@@ -66,9 +70,10 @@ class Trans:
             raise ValueError("只支持'xyzw'或'wxyz'两种格式")
 
         r = R.from_quat(q)
-        # 使用'xyz'顺序获取RPY角
         roll, pitch, yaw = r.as_euler("xyz")
-        return roll, pitch, yaw
+        if use_rad:
+            return roll, pitch, yaw
+        return np.degrees([roll, pitch, yaw])
 
     def create_transform(self, translation, rotation=None, axis=None, angle=None):
         """创建齐次变换矩阵"""
@@ -105,4 +110,9 @@ class Trans:
 
 if __name__ == "__main__":
     trans = Trans()
-    print(trans.deg2rad([0, 45, 90]))
+    quat = [0.6022336272331124, -0.5738677670383182, -0.45149258095975353, 0.3227148796110952]
+    rpy = trans.quaternion_to_rpy(quat, "wxyz", use_rad=True)
+    rpy2quat = trans.rpy_to_quaternions(rpy, in_wxyz="wxyz", use_rad=True)
+    print(rpy)
+    print(rpy2quat)
+    # print(trans.deg2rad([0, 45, 90]))
