@@ -353,7 +353,6 @@ class ArmController:
         print("self.dual_joint_positions[True] = ", self.dual_joint_positions[True])
         print("self.dual_joint_positions[False] = ", self.dual_joint_positions[False])
         # left_target_joint_, right_target_joint_ = self.ik_dual(left_target_pos, left_target_quat, self.dual_joint_positions[True], right_target_pos, right_target_quat, self.dual_joint_positions[False])
-        print("self.left_init_joints = ", self.left_init_joints)
         left_target_joint_, right_target_joint_ = self.ik_dual(left_target_pos, left_target_quat, self.left_init_joints, right_target_pos, right_target_quat, self.right_init_joints)
         self.left_init_joints, self.right_init_joints = left_target_joint_, right_target_joint_
         self.send_arms_cmd_pos_service(self.joint_names[True] + self.joint_names[False], list(left_target_joint_) + list(right_target_joint_), [self.joint_speed] * 14, [self.joint_current] * 14)
@@ -559,10 +558,10 @@ class ArmController:
         left_target_quat_ = left_start_quat_
         right_target_quat_ = right_start_quat_
         # 执行移动
-        move_down_left_success, move_down_right_success = self.move_dual_arm_by_xyz(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
+        move_down_success = self.move_dual_arm_by_xyz(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
         # 打印调试信息
-        rospy.loginfo("Moved down successfully") if move_down_left_success and move_down_right_success else rospy.logerr("Moved down Failed")
-        return move_down_left_success and move_down_right_success
+        rospy.loginfo("Moved down successfully") if move_down_success else rospy.logerr("Moved down Failed")
+        return move_down_success
 
     def move_dual_left(self, distance: float):
         """向左移动指定距离"""
