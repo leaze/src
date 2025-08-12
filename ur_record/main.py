@@ -165,13 +165,13 @@ class RobotController:
 
     def place_box(self):
         # 插入楔子
-        left_target_pos_ = [0.4063314413381147, 0.3881172813896993, -0.00877463118863537]
+        left_target_pos_ = [0.4063314413381147, 0.3881172813896993, -0.044877463118863537]
         left_target_quat_ = [0.6807789272958477, -0.5755135167876521, -0.25998186199600737, 0.3711248786833258]
 
-        right_target_pos_ = [0.4063314413381147, -0.3881172813896993, 0.004877463118863537]
+        right_target_pos_ = [0.4063314413381147, -0.3881172813896993, 0.044877463118863537]
         right_target_quat_ = [0.6807789272958477, 0.5755135167876521, -0.25998186199600737, -0.3711248786833258]
         # # 发送消息
-        insert_wedge_success = self.arm_controller.move_dual_arm_by_xyz_tr2(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_, steps=2, is_random=False, direction=[0.0, 0.0, 0.0])
+        insert_wedge_success = self.arm_controller.move_dual_arm_by_xyz_tr2(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_, steps=6, is_random=False, direction=[-1.0, 0.0, 1.0])
 
     def get_arm_state(self):
         print("left_joint_positions =", list(self.arm_controller.left_joint_positions))
@@ -183,46 +183,45 @@ class RobotController:
 
     def test(self):
         # 0 定位纸箱
-        left_position, right_position = [-0.15, 0.30, 0.0, -1.0, 0.0, 0.0, -0.0], [-0.15, -0.30, 0.0, -1.0, -0.0, 0.0, 0.0]
+        left_position = [-0.44488466428899637, -0.1413471722352361, 0.0838518447383795, -1.1376005814061285, 1.3067089353370662, 0.4117615335352974, -0.1380289038814869]
+        right_position = [-0.44488466428899637, 0.1413471722352361, -0.0838518447383795, -1.1376005814061285, -1.3067089353370662, 0.4117615335352974, 0.1380289038814869]
         grab_step1_success = self.arm_controller.rotate_dual_joint(left_position, right_position)
         # self.hand_controller.grip_box()
         
         # 置纸箱的逻辑
         # 插入楔子
-        left_target_pos_ = [0.4063314413381147, 0.3881172813896993, 0.04877463118863537]
+        left_target_pos_ = [0.3563314413381147, 0.3881172813896993, 0.04877463118863537]
         left_target_quat_ = [0.6807789272958477, -0.5755135167876521, -0.25998186199600737, 0.3711248786833258]
         # left_target_rpy_ = self.trans.quaternion_to_rpy(left_target_quat_, "wxyz", use_rad=False)
-        left_target_rpy_ = [-78.29155803, 4.19748512, 53.77650059]
-        left_target_quat_ = self.trans.rpy_to_quaternions(left_target_rpy_, "wxyz", use_rad=False)
+        # left_target_rpy_ = [-78.29155803, 4.19748512, 53.77650059]
+        # left_target_quat_ = self.trans.rpy_to_quaternions(left_target_rpy_, "wxyz", use_rad=False)
 
-        right_target_pos_ = [0.4063314413381147, -0.3881172813896993, 0.04877463118863537]
+        right_target_pos_ = [0.3563314413381147, -0.3881172813896993, 0.04877463118863537]
         right_target_quat_ = [0.6807789272958477, 0.5755135167876521, -0.25998186199600737, -0.3711248786833258]
         # right_target_rpy_ = self.trans.quaternion_to_rpy(right_target_quat_, "wxyz", use_rad=False)
-        right_target_rpy_ = [ 78.29155803, 4.19748512, -53.77650059]
-        right_target_quat_ = self.trans.rpy_to_quaternions(right_target_rpy_, "wxyz", use_rad=False)
+        # right_target_rpy_ = [ 78.29155803, 4.19748512, -53.77650059]
+        # right_target_quat_ = self.trans.rpy_to_quaternions(right_target_rpy_, "wxyz", use_rad=False)
         # 发送消息
         insert_wedge_success = self.arm_controller.move_dual_arm_by_xyz(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_)
         rospy.sleep(1)
         # 防置箱子
-        left_target_pos_ = [0.4063314413381147, 0.3881172813896993, -0.04877463118863537]
+        left_target_pos_ = [0.3563314413381147, 0.3881172813896993, -0.04877463118863537]
         left_target_quat_ = [0.6807789272958477, -0.5755135167876521, -0.25998186199600737, 0.3711248786833258]
 
-        right_target_pos_ = [0.4063314413381147, -0.3881172813896993, 0.04877463118863537]
+        right_target_pos_ = [0.3563314413381147, -0.3881172813896993, -0.04877463118863537]
         right_target_quat_ = [0.6807789272958477, 0.5755135167876521, -0.25998186199600737, -0.3711248786833258]
         # # 发送消息
-        # insert_wedge_success = self.arm_controller.move_dual_arm_by_xyz_tr2(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_, steps=3, is_random=False, direction=[0.0, 0.0, 0.0])
-        for i in range(4):
-            self.arm_controller.move_dual_down(0.02)
+        insert_wedge_success = self.arm_controller.move_dual_arm_by_xyz_tr2(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_, steps=10, is_random=False, direction=[-1.0, 0.0, 1.0])
 
 if __name__ == "__main__":
     rospy.init_node("RobotControllerNode")
     robot_controller = RobotController()
     # robot_controller.get_arm_state()
-    # hand_init_success = robot_controller.hand_controller.init_hand_status()
-    # move_left_status = robot_controller.arm_controller.rotate_joint([-0.0, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0], [-0.0, -0.2, 0.0, 0.0, 0.0, 0.0, 0.0])
-    # arm_init_success = robot_controller.arm_controller.init_arm_status()
+    hand_init_success = robot_controller.hand_controller.init_hand_status()
+    move_left_status = robot_controller.arm_controller.rotate_joint([-0.0, 0.2, 0.0, 0.0, 0.0, 0.0, 0.0], [-0.0, -0.2, 0.0, 0.0, 0.0, 0.0, 0.0])
+    arm_init_success = robot_controller.arm_controller.init_arm_status()
     # robot_controller.insert_wedge()
     # robot_controller.grab_box()
     # robot_controller.place_box()
-    robot_controller.test()
+    # robot_controller.test()
     print("Service test end")

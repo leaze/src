@@ -21,8 +21,8 @@ class ArmTracIKSolver(TracIKSolver):
     def __init__(self, urdf_file, base_link, tip_link, timeout=0.005, epsilon=1e-5, solve_type="Speed", max_attempts=10):
         super().__init__(urdf_file, base_link, tip_link, timeout, epsilon, solve_type)
         self.lb, self.ub = self.joint_limits
-        self.lb = self.lb * 0.95
-        self.ub = self.ub * 0.95
+        self.lb = self.lb * 0.92
+        self.ub = self.ub * 0.92
         self.joint_mid = (self.lb + self.ub) / 2.0
         self.current_joints = [0.0] * self.number_of_joints
         self.obstacle_detected = False

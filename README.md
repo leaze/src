@@ -9,6 +9,13 @@ pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
+## Gazebo
+
+```shell
+# 停止 gazebo
+ps -ef | grep gazebo | grep -v grep | awk '{print $2}' | xargs -r kill -9
+```
+
 ## 启动Cat_kin
 
 ```shell

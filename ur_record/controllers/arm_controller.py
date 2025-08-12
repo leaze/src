@@ -385,8 +385,8 @@ class ArmController:
             # rospy.logwarn(f"right_target_pos = {left_target_quat}")
             right_target_quat = [traj_right_xyzw_[i][3], traj_right_xyzw_[i][0], traj_right_xyzw_[i][1], traj_right_xyzw_[i][2]]
             # left_target_joint_, right_target_joint_ = self.ik_dual(left_target_pos, left_target_quat, self.dual_joint_positions[True], right_target_pos, right_target_quat, self.dual_joint_positions[False])
-            left_target_joint_, right_target_joint_ = self.ik_dual(left_target_pos, left_target_quat, None, right_target_pos, right_target_quat, None)
-            # left_target_joint_, right_target_joint_ = self.ik_dual(left_target_pos, left_target_quat, self.left_init_joints, right_target_pos, right_target_quat, self.right_init_joints)
+            # left_target_joint_, right_target_joint_ = self.ik_dual(left_target_pos, left_target_quat, None, right_target_pos, right_target_quat, None)
+            left_target_joint_, right_target_joint_ = self.ik_dual(left_target_pos, left_target_quat, self.left_init_joints, right_target_pos, right_target_quat, self.right_init_joints)
             self.left_init_joints, self.right_init_joints = left_target_joint_, right_target_joint_
             traj_left_joints.append(left_target_joint_)
             traj_right_joints.append(right_target_joint_)

@@ -38,6 +38,7 @@ sudo apt-get install ros-noetic-cv-bridge -y
 sudo apt-get install ros-noetic-audio-common -y
 sudo apt-get install ros-noetic-controller-manager -y
 sudo apt-get install ros-noetic-rosbridge-server -y
+sudo apt-get install ros-noetic-octomap ros-noetic-octomap-mapping ros-noetic-octomap-ros ros-noetic-octomap-server -y
 # msckf_vio
 sudo apt-get install libsuitesparse-dev -y
 sudo apt-get install ros-noetic-random-numbers -y
