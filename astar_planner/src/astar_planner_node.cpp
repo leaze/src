@@ -16,6 +16,7 @@ public:
         nh_.param("goal_x", goal_.x(), 4.0);
         nh_.param("goal_y", goal_.y(), 2.0);
         nh_.param("goal_z", goal_.z(), 1.0);
+        nh_.param("inflation_radius", inflation_radius_, 0.2);  // 默认0.2米膨胀
         
         // 订阅/发布
         octomap_sub_ = nh_.subscribe("/octomap_full", 1, &OctomapPlanner::octomapCallback, this);
@@ -38,7 +39,9 @@ private:
         ROS_INFO("Received Octomap (resolution: %.2f m)", octree_->getResolution());
         
         // 执行路径规划
-        astar_planner::AStar3D planner(octree_.get());
+        // astar_planner::AStar3D planner(octree_.get());
+        astar_planner::AStar3D planner(octree_.get(), inflation_radius_);
+        planner.setInflationRadius(inflation_radius_);  // 设置膨胀半径
         std::vector<Eigen::Vector3d> path_points;
         
         if (planner.plan(start_, goal_, path_points)) {
@@ -73,6 +76,7 @@ private:
     ros::Publisher path_pub_;
     Eigen::Vector3d start_, goal_;
     std::unique_ptr<octomap::OcTree> octree_;
+    double inflation_radius_;  // 膨胀半径
 };
 
 int main(int argc, char** argv) {

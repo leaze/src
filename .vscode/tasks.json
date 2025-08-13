@@ -1,24 +1,8 @@
 {
 	"version": "2.0.0",
 	"tasks": [
-		// {
-		// 	"type": "catkin_make",
-		// 	"args": [
-		// 		"--directory",
-		// 		"/home/gym/code/catkin_ws",
-		// 		"-DCMAKE_BUILD_TYPE=RelWithDebInfo"
-		// 	],
-		// 	"problemMatcher": [
-		// 		"$catkin-gcc"
-		// 	],
-		// 	"group": {
-		// 		"kind": "build",
-		// 		"isDefault": true
-		// 	},
-		// 	"label": "catkin_make: build"
-		// },
 		{
-			"label": "make build", //编译的项目名，build
+			"label": "catkin_make all", //编译的项目名，build
 			"type": "shell",
 			"command": "mkdir -p ${workspaceFolder}/../devel/lib/${relativeFileDirname}/..;cd ..;catkin_make", //编译命令
 			"group": {
@@ -30,6 +14,17 @@
 			"label": "clean",
 			"type": "shell",
 			"command": "make clean",
-		}
+		},
+		{
+			"label": "catkin_make", //编译的项目名，build
+			"type": "shell",
+			// https://vscode.js.cn/docs/reference/variables-reference
+			// "command": "echo ${workspaceFolder}/../devel/$(basename $(dirname ${relativeFileDirname}))/lib/$(basename $(dirname ${relativeFileDirname}))/;echo ${workspaceFolder}/../devel/${relativeFileDirname}/../lib/${relativeFileDirname}/../${fileBasenameNoExtension}", //编译命令
+			"command": "mkdir -p ${workspaceFolder}/../devel/${relativeFileDirname}/../lib/${relativeFileDirname}/../;cd ..;catkin_make --pkg $(basename $(dirname ${relativeFileDirname}))", //编译命令
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},
 	]
 }

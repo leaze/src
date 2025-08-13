@@ -30,14 +30,16 @@ add_library(${PROJECT_NAME}
   src/astar_3d.cpp
 )
 
-add_executable(planner_node src/planner_node.cpp)
-target_link_libraries(planner_node
+add_executable(astar_planner_node 
+src/astar_planner_node.cpp
+)
+target_link_libraries(astar_planner_node
   ${catkin_LIBRARIES}
   ${OCTOMAP_LIBRARIES}
   ${PROJECT_NAME}
 )
 
-install(TARGETS planner_node ${PROJECT_NAME}
+install(TARGETS astar_planner_node ${PROJECT_NAME}
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

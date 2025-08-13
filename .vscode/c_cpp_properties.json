@@ -6,11 +6,12 @@
         "limitSymbolsToIncludedHeaders": false
       },
       "includePath": [
-        "/root/gym/code/catkin_ws/devel/include/**",
+        "${workspaceFolder}/**",
+        "${workspaceFolder}/../devel/include/**",
         "/opt/ros/noetic/include/**",
-        "/root/gym/code/catkin_ws/src/6-robot/wpr_simulation/include/**",
-        "/root/gym/code/catkin_ws/src/unitree/robocup_g1/unitree_guide/include/**",
-        "/root/gym/code/catkin_ws/src/astar_planner/include/**",
+        "${workspaceFolder}/6-robot/wpr_simulation/include/**",
+        "${workspaceFolder}/unitree/robocup_g1/unitree_guide/include/**",
+        "${workspaceFolder}/astar_planner/include/**",
         "/usr/include/**"
       ],
       "name": "ROS",

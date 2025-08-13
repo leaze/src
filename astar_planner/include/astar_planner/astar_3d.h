@@ -19,13 +19,19 @@ struct Node {
 
 class AStar3D {
 public:
-    AStar3D(octomap::OcTree* tree);
+    // 修改构造函数添加膨胀半径参数
+    AStar3D(octomap::OcTree* tree, double inflation_radius = 0.0);
+    
     bool plan(const Eigen::Vector3d& start, const Eigen::Vector3d& goal, 
               std::vector<Eigen::Vector3d>& path);
+    
+    // 添加设置膨胀半径的方法
+    void setInflationRadius(double radius) { inflation_radius_ = radius; }
 
 private:
     octomap::OcTree* octree_;
     double resolution_;
+    double inflation_radius_;  // 添加膨胀半径成员变量
 
     double heuristic(const octomap::point3d& a, const octomap::point3d& b);
     bool isCollision(const octomap::point3d& point);
