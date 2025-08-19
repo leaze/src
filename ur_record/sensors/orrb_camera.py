@@ -11,29 +11,32 @@
 from scipy.spatial.transform import Rotation as R
 from bodyctrl_msgs.msg import MotorStatusMsg
 from geometry_msgs.msg import PoseStamped
+from tracikpy import TracIKSolver
 import numpy as np
 import threading
 import rospy
 import time
 
 
-def rpy_to_quaternions(roll: float, pitch: float, yaw: float, mode="xyzw"):
+def rpy_to_quaternions(rpy, in_wxyz="wxyz", use_rad=True):
     """将欧拉角(roll, pitch, yaw)转换为四元数。
     参数:
         roll: 绕X轴的旋转角度(以度为单位)
         pitch: 绕Y轴的旋转角度(以度为单位)
         yaw: 绕Z轴的旋转角度(以度为单位)
-        mode: 返回四元数的顺序，默认为"xyzw"，可选"wxyz"
+        in_wxyz: 返回四元数的顺序，默认为"wxyz", 否则"xyzw"
+        use_rad: 输入的roll, pitch, yaw参数是否为弧度, 否则为角度
     返回:
         四元数, 格式为numpy数组。
     """
     # 生成旋转对象（以XYZ欧拉角顺序）
-    r = R.from_euler("xyz", [np.deg2rad(roll), np.deg2rad(pitch), np.deg2rad(yaw)])
+    roll, pitch, yaw = rpy
+    r = R.from_euler("xyz", [roll, pitch, yaw]) if use_rad else R.from_euler("xyz", [np.deg2rad(roll), np.deg2rad(pitch), np.deg2rad(yaw)])
     # 以xyzw顺序获取四元数
     xyzw = r.as_quat()  # 返回顺序是xyzw
     # 转换为wxyz顺序
     wxyz = [xyzw[3], xyzw[0], xyzw[1], xyzw[2]]
-    if mode == "wxyz":
+    if in_wxyz == "wxyz":
         return np.array(wxyz)
     else:
         return xyzw
@@ -115,10 +118,101 @@ class OrrbCamera():
             "head_pitch": 0.0,
             "head_roll": 0.0,
         }
+        self.solver = TracIKSolver("./ur_record/urdf/robot.urdf", "pelvis", "camera_head_link")
         self.camera_pos_sub = rospy.Subscriber("/visualization_pose", PoseStamped, self.callback)
         self.head_status_sub = rospy.Subscriber("/head/status", MotorStatusMsg, self.head_status_callback)
         self.waist_status_sub = rospy.Subscriber("/waist/status", MotorStatusMsg, self.waist_status_callback)
         time.sleep(0.1)
+
+    def baselink2camera(self, xyz_base, xyzw_base, joint_angles: dict):
+        """
+        将骨盆坐标系下的位姿转换到相机坐标系
+        输入:
+            xyz_base: 骨盆坐标系下的位置 (x, y, z)
+            xyzw_base: 骨盆坐标系下的姿态四元数 (w, x, y, z)
+            joint_angles: 关节角度字典 (弧度)
+                - waist_yaw: 腰部偏航关节角度
+                - head_yaw: 头部偏航关节角度
+                - head_pitch: 头部俯仰关节角度
+                - head_roll: 头部滚转关节角度
+        输出:
+            (x_cam, y_cam, z_cam): 相机坐标系下的位置
+            (w_cam, x_cam, y_cam, z_cam): 相机坐标系下的姿态四元数
+        """
+        # 解包输入
+        x_base, y_base, z_base = xyz_base
+        qw_base, qx_base, qy_base, qz_base = xyzw_base
+        
+        # 关节角度解包（弧度）
+        waist_yaw = joint_angles.get('waist_yaw', 0.0)
+        head_yaw = joint_angles.get('head_yaw', 0.0)
+        head_pitch = joint_angles.get('head_pitch', 0.0)
+        head_roll = joint_angles.get('head_roll', 0.0)
+        
+        # 固定变换参数（与正变换相同）
+        t_camera = [0.052782, -6.5455e-05, 0.067499]  # camera_head_joint
+        rpy_camera = [0, 0.2618, 0]  # 15°俯仰
+        t_pitch = [0.01455, 0, 0.0304]  # head_pitch_joint
+        rpy_pitch = [0, 0.2618, 0]  # 15°俯仰
+        t_yaw = [-0.002, 0, 0.56508]  # head_yaw_joint
+        
+        # 构建正向变换矩阵（从相机到骨盆）
+        T_cam_to_roll = create_transform(t_camera, rpy_camera)
+        T_roll_to_pitch = create_transform(
+            [0, 0, 0], 
+            axis=np.array([1, 0, 0]), 
+            angle=head_roll
+        )
+        T_pitch_to_yaw = create_transform(
+            t_pitch, rpy_pitch,
+            axis=np.array([0, 1, 0]), 
+            angle=head_pitch
+        )
+        T_yaw_to_waist = create_transform(
+            t_yaw,
+            axis=np.array([0, 0, 1]), 
+            angle=head_yaw
+        )
+        T_waist_to_base = create_transform(
+            [0, 0, 0], 
+            axis=np.array([0, 0, 1]), 
+            angle=waist_yaw
+        )
+        
+        # 组合完整正向变换矩阵：camera → pelvis
+        T_total_forward = T_waist_to_base @ T_yaw_to_waist @ T_pitch_to_yaw @ T_roll_to_pitch @ T_cam_to_roll
+        # T_total_forward = self.solver.fk([waist_yaw, head_yaw, head_pitch, head_roll])
+        # 计算逆变换矩阵：pelvis → camera
+        T_total_inverse = np.linalg.inv(T_total_forward)
+        # print("T_total_forward = ", list(T_total_forward[:3, 3]))
+        # print("T_total_inverse = ", list(T_total_inverse))
+        
+        # 1. 位置反变换 ==============================================================
+        # 骨盆坐标系 → 相机坐标系
+        pos_base_hom = np.array([x_base, y_base, z_base, 1])
+        pos_cam_hom = T_total_inverse @ pos_base_hom
+        x_cam, y_cam, z_cam = pos_cam_hom[:3]
+        
+        # 2. 姿态反变换 ==============================================================
+        # 物体在骨盆坐标系下的姿态
+        rot_obj_base = R.from_quat([
+            qx_base, qy_base, qz_base, qw_base
+        ])
+        
+        # 骨盆到相机的旋转（来自逆变换矩阵）
+        rot_base_to_cam = R.from_matrix(T_total_inverse[:3, :3])
+        
+        # 物体在相机坐标系下的姿态
+        rot_obj_cam = rot_base_to_cam * rot_obj_base
+        
+        # 标准化四元数
+        qx_cam, qy_cam, qz_cam, qw_cam = rot_obj_cam.as_quat()
+        qw_norm, qx_norm, qy_norm, qz_norm = normalize_quaternion(
+            qw_cam, qx_cam, qy_cam, qz_cam
+        )
+        
+        # 返回位置和标准化四元数
+        return (x_cam, y_cam, z_cam), (qw_norm, qx_norm, qy_norm, qz_norm)
 
     def camera2baselink(self, xyz_cam, xyzw_cam, joint_angles: dict):
         """
@@ -171,6 +265,7 @@ class OrrbCamera():
 
         # 组合完整变换：camera_head_link → pelvis
         T_total = T_waist_to_pelvis @ T_yaw_to_waist @ T_pitch_to_yaw @ T_roll_to_pitch @ T_cam_to_roll
+        # T_total = self.solver.fk([waist_yaw, head_yaw, head_pitch, head_roll])
 
         # 位置变换
         pos_cam = np.array([x_cam, y_cam, z_cam, 1])
@@ -227,15 +322,19 @@ class OrrbCamera():
         return (x_pelvis, y_pelvis, z_pelvis), (qw_norm, qx_norm, qy_norm, qz_norm)
 
     def callback(self, msg: PoseStamped):
-        xyz_ = [msg.pose.position.x, msg.pose.position.y, msg.pose.position.z]
+        # xyz_ = [msg.pose.position.x, msg.pose.position.y, msg.pose.position.z]
+        xyz_ = [msg.pose.position.z, -msg.pose.position.x, -msg.pose.position.y]
         wxyz_ = [msg.pose.orientation.w, msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z]
         xyzw_ = [msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w]
         rpy_ = quaternion_to_rpy(wxyz_, "xyzw")
         with self.lock:
             joint_angles_ = self.joint_angles_.copy()
         world_xyz_, world_wxyz_ = self.camera2baselink(xyz_, xyzw_, joint_angles_)
-        # rospy.loginfo(f"world_xyz_ = {world_xyz_}")
+        trans_xyz_, trans_wxyz_ = self.baselink2camera(world_xyz_, world_wxyz_, joint_angles_)
+        rospy.loginfo(f"pelvis_xyz_ = {world_xyz_}")
         # rospy.loginfo(f"world_wxyz_ = {world_wxyz_}")
+        rospy.loginfo(f"camera_xyz_ = {trans_xyz_}")
+        # rospy.loginfo(f"trans_wxyz_ = {trans_wxyz_}")
         # 存储结果
         with self.lock:
             self.flag_wedge = True

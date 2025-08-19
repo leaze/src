@@ -67,6 +67,7 @@ add_message_files(
 add_service_files(
   FILES
   set_angle.srv
+  set_force.srv
   set_clear_error.srv
   SendArmsCmd.srv
 )

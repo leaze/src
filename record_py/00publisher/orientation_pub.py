@@ -11,7 +11,6 @@ def pose_publisher():
     
     # 设置发布频率
     rate = rospy.Rate(10)  # 10 Hz
-    
     while not rospy.is_shutdown():
         # 创建PoseStamped消息实例
         pose_msg = PoseStamped()
@@ -23,9 +22,9 @@ def pose_publisher():
         pose_msg.header.frame_id = 'world'
         
         # 设置位置
-        pose_msg.pose.position.x = 1.0
-        pose_msg.pose.position.y = 2.0
-        pose_msg.pose.position.z = 0.0
+        pose_msg.pose.position.x = 0.0
+        pose_msg.pose.position.y = 0.0
+        pose_msg.pose.position.z = 1.0
         
         # 设置方向（四元数）
         pose_msg.pose.orientation.x = 0.0

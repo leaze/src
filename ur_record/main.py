@@ -171,7 +171,7 @@ class RobotController:
         right_target_pos_ = [0.4063314413381147, -0.3881172813896993, 0.044877463118863537]
         right_target_quat_ = [0.6807789272958477, 0.5755135167876521, -0.25998186199600737, -0.3711248786833258]
         # # 发送消息
-        insert_wedge_success = self.arm_controller.move_dual_arm_by_xyz_tr2(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_, steps=6, is_random=False, direction=[-1.0, 0.0, 1.0])
+        place_box_success = self.arm_controller.move_dual_arm_by_xyz_tr2(left_target_pos_, left_target_quat_, right_target_pos_, right_target_quat_, steps=6, is_random=False, direction=[-1.0, 0.0, 1.0])
 
     def get_arm_state(self):
         print("left_joint_positions =", list(self.arm_controller.left_joint_positions))

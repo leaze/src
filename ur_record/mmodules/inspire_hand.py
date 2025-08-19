@@ -9,6 +9,7 @@
 @Site    :   https://star-cheng.github.io/Blog/
 '''
 from bodyctrl_msgs.srv import set_angle, set_angleRequest, set_angleResponse
+from bodyctrl_msgs.srv import set_force, set_forceRequest, set_forceResponse
 from sensor_msgs.msg import JointState
 import numpy as np
 import threading
@@ -44,6 +45,7 @@ class InspireHandController:
 
         # 角度设置服务代理
         self.set_angle_service = rospy.ServiceProxy(f"/inspire_hand/set_angle/{self.hand}_hand",set_angle)
+        self.set_angle_force_service = rospy.ServiceProxy(f"/inspire_hand/set_force/{self.hand}_hand", set_force)
         rospy.sleep(0.1)
 
     # def state_callback(self, msg:JointState):
@@ -209,6 +211,28 @@ class InspireHandController:
         
         return success
 
+    def set_force(self, forces:list) -> bool:
+        """
+        设置手指力矩
+        :param forces: 长度为6的列表, 对应各手指力矩百分比[0.0-1.0]
+                       [小指, 无名指, 中指, 食指, 拇指弯曲, 拇指旋转]
+        :return: 是否设置成功
+        """
+        try:
+            req = set_forceRequest()
+            req.force0Ratio = forces[0]  # 小指
+            req.force1Ratio = forces[1]  # 无名指
+            req.force2Ratio = forces[2]  # 中指
+            req.force3Ratio = forces[3]  # 食指
+            req.force4Ratio = forces[4]  # 拇指弯曲
+            req.force5Ratio = forces[5]  # 拇指旋转
+            
+            resp = self.set_angle_force_service(req)
+            rospy.loginfo(f"Force set {'suceess' if resp.force_accepted else 'failed'}")
+            return resp.force_accepted
+        except rospy.ServiceException as e:
+            rospy.logerr(f"Force set service call failed: {e}")
+            return False
 
 # 使用示例
 if __name__ == "__main__":
