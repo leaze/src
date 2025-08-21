@@ -23,7 +23,7 @@ def pose_publisher():
         
         # 设置位置
         pose_msg.pose.position.x = 0.6888095815758712
-        pose_msg.pose.position.y = 0.2
+        pose_msg.pose.position.y = 0.0
         pose_msg.pose.position.z = -0.4731161494439105
         
         # 设置方向（四元数）

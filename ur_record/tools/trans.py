@@ -72,7 +72,7 @@ class Trans:
         r = R.from_quat(q)
         roll, pitch, yaw = r.as_euler("xyz")
         if use_rad:
-            return roll, pitch, yaw
+            return np.array([roll, pitch, yaw])
         return np.degrees([roll, pitch, yaw])
 
     def create_transform(self, translation, rotation=None, axis=None, angle=None):
@@ -147,9 +147,9 @@ class Trans:
 
 if __name__ == "__main__":
     trans = Trans()
-    quat = [0.6022336272331124, -0.5738677670383182, -0.45149258095975353, 0.3227148796110952]
+    quat = [0.9761948573081735, -0.21689536778150603, 0.0, 0.0]
     rpy = trans.quaternion_to_rpy(quat, "wxyz", use_rad=True)
     rpy2quat = trans.rpy_to_quaternions(rpy, in_wxyz="wxyz", use_rad=True)
-    print(rpy)
+    print(list(rpy))
     print(rpy2quat)
     # print(trans.deg2rad([0, 45, 90]))
