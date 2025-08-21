@@ -107,6 +107,43 @@ class Trans:
     def deg2rad(self, deg_ls: list):
         return [round(math.radians(deg), 3) for deg in deg_ls]
 
+    def rotate_trans(self, center_xyz_: list, origin_xyz_: list, origin_wxyz_: list, delta_xyz_: list, delta_wxyz_: list):
+        """计算三维空间中点绕中心点平移和旋转后的新坐标和新四元数
+
+        参数:
+            center_xyz_: 中心点的坐标 [x, y, z]
+            center_wxyz_: 中心点的旋转四元数 [w, x, y, z]
+            origin_xyz_: 原始点的坐标 [x, y, z]
+            origin_wxyz_: 原始点的旋转四元数 [w, x, y, z]
+            delta_xyz_: 增量平移 [dx, dy, dz]
+            delta_wxyz_: 增量旋转四元数 [dw, dx, dy, dz]
+
+        返回:
+            rotate_xyz_: 旋转并平移后的坐标 [x, y, z]
+            rotate_wxyz_: 旋转后的四元数 [w, x, y, z]
+        """
+        # 1. 将点转换到局部坐标系（以 center_xyz_ 为中心）
+        local_xyz = np.array(origin_xyz_) - np.array(center_xyz_)
+
+        # 2. 应用增量旋转到局部坐标
+        delta_rotation = R.from_quat([delta_wxyz_[1], delta_wxyz_[2], delta_wxyz_[3], delta_wxyz_[0]])
+        rotated_local_xyz = delta_rotation.apply(local_xyz)
+
+        # 3. 转换回世界坐标系，并加上增量平移
+        rotate_xyz_ = rotated_local_xyz + np.array(center_xyz_) + np.array(delta_xyz_)
+
+        # 4. 计算新的四元数（组合原始旋转、中心旋转和增量旋转）
+        origin_rotation = R.from_quat([origin_wxyz_[1], origin_wxyz_[2], origin_wxyz_[3], origin_wxyz_[0]])
+
+        # 组合旋转：新旋转 = 中心旋转 * 增量旋转 * 原始旋转
+        combined_rotation = delta_rotation * origin_rotation
+        rotate_wxyz_quat = combined_rotation.as_quat()  # 返回 [x, y, z, w]
+
+        # 转换为 [w, x, y, z] 格式
+        rotate_wxyz_ = [rotate_wxyz_quat[3], rotate_wxyz_quat[0], rotate_wxyz_quat[1], rotate_wxyz_quat[2]]
+
+        return list(rotate_xyz_), rotate_wxyz_
+
 
 if __name__ == "__main__":
     trans = Trans()

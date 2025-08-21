@@ -19,12 +19,12 @@ def pose_publisher():
         pose_msg.header.stamp = rospy.Time.now()
         
         # 设置参考坐标系（可以根据实际需要修改）
-        pose_msg.header.frame_id = 'world'
+        pose_msg.header.frame_id = 'wedge'
         
         # 设置位置
-        pose_msg.pose.position.x = 0.0
-        pose_msg.pose.position.y = 0.0
-        pose_msg.pose.position.z = 1.0
+        pose_msg.pose.position.x = 0.6888095815758712
+        pose_msg.pose.position.y = 0.2
+        pose_msg.pose.position.z = -0.4731161494439105
         
         # 设置方向（四元数）
         pose_msg.pose.orientation.x = 0.0

@@ -189,7 +189,7 @@ def baselink2camera(xyz_base, xyzw_base, joint_angles: dict):
 # 测试函数（验证正反变换一致性）
 def test_consistency():
     # 定义测试位姿
-    xyz_cam = (1.17, -0.144, 0.116)
+    xyz_cam = (0.6888095815758712, 6.5455e-05, -0.4731161494439105)
     xyzw_cam = (0.0, 0.0, 0.0, 1.0)  # 绕Y轴90°旋转
     
     # 定义关节角度
@@ -202,9 +202,13 @@ def test_consistency():
     
     # 正向变换：相机 → 骨盆
     pos_base, quat_base = camera2baselink(xyz_cam, xyzw_cam, joint_angles)
-    print("xyzw_cam = ", xyzw_cam)
+    print("pos_base = ", pos_base)
+    print("quat_base = ", quat_base)
     # 反向变换：骨盆 → 相机
+    pos_base = [0.4409711531681323, 0.0, -0.10711783728977194]
+    quat_base = 0.0, 0.0, 0.0, 1.0
     pos_cam_back, quat_cam_back = baselink2camera(pos_base, quat_base, joint_angles)
+    print("pos_cam_back = ", pos_cam_back)
     print("quat_cam_back = ", quat_cam_back)
     
     # 比较原始输入与反向变换结果
