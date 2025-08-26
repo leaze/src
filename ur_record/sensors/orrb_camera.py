@@ -152,12 +152,33 @@ class OrrbCamera:
         self.gap_right_xyz_ = [0.0, 0.0, 0.0]
         self.gap_right_wxyz_ = [1.0, 0.0, 0.0, 0.0]
         # Task3 Location Box
-        self.box_base_xyz_ = [0.0, 0.0, 0.0]
-        self.box_base_wxyz_ = [1.0, 0.0, 0.0, 0.0]
-        self.box_left_xyz_ = [0.0, 0.0, 0.0]
-        self.box_left_wxyz_ = [1.0, 0.0, 0.0, 0.0]
-        self.box_right_xyz_ = [0.0, 0.0, 0.0]
-        self.box_right_wxyz_ = [1.0, 0.0, 0.0, 0.0]
+        self.box_base_xyz_ = [1.0199442218244248, 0.01942504239053604, -0.27795075170187666]
+        self.box_base_wxyz_ = [-0.46106937969824713, 0.4800315859739916, 0.5791153836771035, 0.47075479387945635]
+        self.box_left_xyz_ = [0.40633244310433764, 0.3981252186502484, 0.04878020098283067]
+        self.box_left_wxyz_ = [0.6809743569622164, -0.5752850948658481, -0.2598707189115206, 0.3711983219755949]
+        self.box_right_xyz_ = [0.40633415001580725, -0.3981165303275517, 0.04875992847514934]
+        self.box_right_wxyz_ = [0.6807281474239979, 0.5754152829435915, -0.2603148717590432, -0.3711369140906246]
+        # Task4 Location Shangliao1
+        self.shangliao1_base_xyz_ = [1.0199442218244248, 0.01942504239053604, -0.27795075170187666]
+        self.shangliao1_base_wxyz_ = [-0.46106937969824713, 0.4800315859739916, 0.5791153836771035, 0.47075479387945635]
+        self.shangliao1_left_xyz_ = [0.40633244310433764, 0.3981252186502484, 0.04878020098283067]
+        self.shangliao1_left_wxyz_ = [0.6809743569622164, -0.5752850948658481, -0.2598707189115206, 0.3711983219755949]
+        self.shangliao1_right_xyz_ = [0.40633415001580725, -0.3981165303275517, 0.04875992847514934]
+        self.shangliao1_right_wxyz_ = [0.6807281474239979, 0.5754152829435915, -0.2603148717590432, -0.3711369140906246]
+        # Task5 Location Shangliao2
+        self.shangliao2_base_xyz_ = [1.0199442218244248, 0.01942504239053604, -0.27795075170187666]
+        self.shangliao2_base_wxyz_ = [-0.46106937969824713, 0.4800315859739916, 0.5791153836771035, 0.47075479387945635]
+        self.shangliao2_left_xyz_ = [0.40633244310433764, 0.3981252186502484, 0.04878020098283067]
+        self.shangliao2_left_wxyz_ = [0.6809743569622164, -0.5752850948658481, -0.2598707189115206, 0.3711983219755949]
+        self.shangliao2_right_xyz_ = [0.40633415001580725, -0.3981165303275517, 0.04875992847514934]
+        self.shangliao2_right_wxyz_ = [0.6807281474239979, 0.5754152829435915, -0.2603148717590432, -0.3711369140906246]
+        # Task5 Location Shangliao2
+        self.shangliao3_base_xyz_ = [1.0199442218244248, 0.01942504239053604, -0.27795075170187666]
+        self.shangliao3_base_wxyz_ = [-0.46106937969824713, 0.4800315859739916, 0.5791153836771035, 0.47075479387945635]
+        self.shangliao3_left_xyz_ = [0.40633244310433764, 0.3981252186502484, 0.04878020098283067]
+        self.shangliao3_left_wxyz_ = [0.6809743569622164, -0.5752850948658481, -0.2598707189115206, 0.3711983219755949]
+        self.shangliao3_right_xyz_ = [0.40633415001580725, -0.3981165303275517, 0.04875992847514934]
+        self.shangliao3_right_wxyz_ = [0.6807281474239979, 0.5754152829435915, -0.2603148717590432, -0.3711369140906246]
 
         self.world_left_xyz_ = [5.0485000000000016e-05, 0.3474061668312111, -0.16362046604205055]
         self.world_left_wxyz_ = [0.9929713547651187, 0.11835492645396999, -1.1102230246251565e-16, 6.389026042022437e-17]
@@ -171,7 +192,7 @@ class OrrbCamera:
         self.lock = threading.Lock()
         self.joint_angles_ = {"waist_yaw": 0.0, "head_yaw": 0.0, "head_pitch": 0.0, "head_roll": 0.0}
         self.solver = TracIKSolver("./ur_record/urdf/robot.urdf", "pelvis", "camera_head_link")
-        self.camera_pos_sub = rospy.Subscriber("/visualization_pose", PoseStamped, self.callback)
+        self.camera_pos_sub = rospy.Subscriber("/visual_pose", PoseStamped, self.callback)
         self.head_status_sub = rospy.Subscriber("/head/status", MotorStatusMsg, self.head_status_callback)
         self.waist_status_sub = rospy.Subscriber("/waist/status", MotorStatusMsg, self.waist_status_callback)
         time.sleep(0.1)
@@ -367,6 +388,10 @@ class OrrbCamera:
         rospy.loginfo(f"===============================================================================================")
         rospy.loginfo(f"pelvis_xyz_ = {world_xyz_}")
         rospy.loginfo(f"camera_xyz_ = {trans_xyz_}")
+        rospy.loginfo(f"delta_xyz_ = {np.array(self.box_base_xyz_) - np.array(world_xyz_)}")
+        rospy.loginfo(f"pelvis_wxyz_ = {world_wxyz_}")
+        rospy.loginfo(f"camera_wxyz_ = {trans_wxyz_}")
+        rospy.loginfo(f"frame_id = {frame_id}")
         if frame_id == "wedge":
             delta_xyz_ = np.array(self.wedge_base_xyz_) - np.array(world_xyz_)
             delta_rpy_ = quaternion_to_rpy(self.wedge_base_wxyz_, "wxyz", use_rad=True) - quaternion_to_rpy(world_wxyz_, "wxyz", use_rad=True)
@@ -386,9 +411,14 @@ class OrrbCamera:
         elif frame_id == "box":
             delta_xyz_ = np.array(self.box_base_xyz_) - np.array(world_xyz_)
             delta_rpy_ = quaternion_to_rpy(self.box_base_wxyz_, "wxyz", use_rad=True) - quaternion_to_rpy(world_wxyz_, "wxyz", use_rad=True)
+            rospy.loginfo(f"delta_rpy_ = {delta_rpy_}")
             delta_wxyz_ = rpy_to_quaternions(delta_rpy_, "wxyz", use_rad=True)
             left_rotated_xyz_, left_rotated_wxyz_ = rotate_trans(self.box_base_xyz_, self.box_left_xyz_, self.box_left_wxyz_, delta_xyz_, delta_wxyz_)
             right_rotated_xyz_, right_rotated_wxyz_ = rotate_trans(self.box_base_xyz_, self.box_right_xyz_, self.box_right_wxyz_, delta_xyz_, delta_wxyz_)
+            delta_left_rotated_xyz_ = np.array(self.box_left_xyz_) - np.array(left_rotated_xyz_)
+            delta_right_rotated_xyz_ = np.array(self.box_right_xyz_) - np.array(right_rotated_xyz_)
+            rospy.loginfo(f"delta_left_rotated_xyz_ = {delta_left_rotated_xyz_}")
+            rospy.loginfo(f"delta_right_rotated_xyz_ = {delta_right_rotated_xyz_}")
             with self.lock:
                 self.flag_box = True
         else:
@@ -402,8 +432,8 @@ class OrrbCamera:
             self.world_right_xyz_ = left_rotated_xyz_
             self.world_right_wxyz_ = right_rotated_wxyz_
             rospy.loginfo(f"left_rotated_xyz_ = {left_rotated_xyz_}")
-            rospy.loginfo(f"left_rotated_wxyz_ = {left_rotated_wxyz_}")
             rospy.loginfo(f"right_rotated_xyz_ = {right_rotated_xyz_}")
+            rospy.loginfo(f"left_rotated_wxyz_ = {left_rotated_wxyz_}")
             rospy.loginfo(f"right_rotated_wxyz_ = {right_rotated_wxyz_}")
 
             

@@ -348,6 +348,12 @@ class ArmController:
         return joint_error_ < self.joint_tolerance
 
     def move_dual_arm_by_xyz(self, left_target_pos, left_target_quat, right_target_pos, right_target_quat):
+        """Move the arm to a target position
+        :param left_target_pos: left目标位置 (list, 米)
+        :param left_target_quat: left旋转四元数 (list)
+        :param right_target_pos: right目标位置 (list, 米)
+        :param right_target_quat: right旋转四元数 (list)
+        """
         # left_target_joint_ = self.arm_kinematics[True].inverse_kinematics(left_target_pos, left_target_quat, self.dual_joint_positions[True])
         # right_target_joint_ = self.arm_kinematics[False].inverse_kinematics(right_target_pos, right_target_quat, self.dual_joint_positions[False])
         print("self.dual_joint_positions[True] = ", self.dual_joint_positions[True])
@@ -365,6 +371,18 @@ class ArmController:
         return left_true_error2_ < self.joint_tolerance and right_true_error2_ < self.joint_tolerance
 
     def move_dual_arm_by_xyz_tr2(self, left_target_pos, left_target_quat, right_target_pos, right_target_quat, steps=5, is_random=True, direction=[1., 0., 1.]):
+        """
+        使用轨迹规划器进行路径规划，并通过逆解计算关节角度，
+        获取关节角度并设置
+        输入：
+        left_target_pos: 左臂目标位置
+        left_target_quat: 左臂目标四元数
+        right_target_pos: 右臂目标位置
+        right_target_quat: 右臂目标四元数
+        steps: 轨迹点数
+        is_random: 是否随机采样
+        direction: 轨迹规划方向
+        """
         # 分别计算左右臂的轨迹
         # traj_left_points_ = self.arm_kinematics[True].generate_trajectory_by_dist(self.left_end_effector_pose, left_target_pos, self.tr_distance)
         # traj_right_points_ = self.arm_kinematics[False].generate_trajectory_by_dist(self.right_end_effector_pose, right_target_pos, self.tr_distance)
