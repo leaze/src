@@ -152,8 +152,8 @@ class OrrbCamera:
         self.gap_right_xyz_ = [0.0, 0.0, 0.0]
         self.gap_right_wxyz_ = [1.0, 0.0, 0.0, 0.0]
         # Task3 Location Box
-        self.box_base_xyz_ = [1.0199442218244248, 0.01942504239053604, -0.27795075170187666]
-        self.box_base_wxyz_ = [-0.46106937969824713, 0.4800315859739916, 0.5791153836771035, 0.47075479387945635]
+        self.box_base_xyz_ = [0.7646399181393441, -0.02403076342716233, -0.02270954457279528]
+        self.box_base_wxyz_ = [-0.1925533722017837, 0.14708254022042264, 0.7002929242041942, 0.6714757966789034]
         self.box_left_xyz_ = [0.40633244310433764, 0.3981252186502484, 0.04878020098283067]
         self.box_left_wxyz_ = [0.6809743569622164, -0.5752850948658481, -0.2598707189115206, 0.3711983219755949]
         self.box_right_xyz_ = [0.40633415001580725, -0.3981165303275517, 0.04875992847514934]
@@ -386,12 +386,11 @@ class OrrbCamera:
         world_xyz_, world_wxyz_ = self.camera2baselink(xyz_, xyzw_, joint_angles_)
         trans_xyz_, trans_wxyz_ = self.baselink2camera(world_xyz_, world_wxyz_, joint_angles_)
         rospy.loginfo(f"===============================================================================================")
+        rospy.loginfo(f"frame_id = {frame_id}")
         rospy.loginfo(f"pelvis_xyz_ = {world_xyz_}")
         rospy.loginfo(f"camera_xyz_ = {trans_xyz_}")
-        rospy.loginfo(f"delta_xyz_ = {np.array(self.box_base_xyz_) - np.array(world_xyz_)}")
         rospy.loginfo(f"pelvis_wxyz_ = {world_wxyz_}")
         rospy.loginfo(f"camera_wxyz_ = {trans_wxyz_}")
-        rospy.loginfo(f"frame_id = {frame_id}")
         if frame_id == "wedge":
             delta_xyz_ = np.array(self.wedge_base_xyz_) - np.array(world_xyz_)
             delta_rpy_ = quaternion_to_rpy(self.wedge_base_wxyz_, "wxyz", use_rad=True) - quaternion_to_rpy(world_wxyz_, "wxyz", use_rad=True)
@@ -411,6 +410,7 @@ class OrrbCamera:
         elif frame_id == "box":
             delta_xyz_ = np.array(self.box_base_xyz_) - np.array(world_xyz_)
             delta_rpy_ = quaternion_to_rpy(self.box_base_wxyz_, "wxyz", use_rad=True) - quaternion_to_rpy(world_wxyz_, "wxyz", use_rad=True)
+            rospy.loginfo(f"delta_xyz_ = {delta_xyz_}")
             rospy.loginfo(f"delta_rpy_ = {delta_rpy_}")
             delta_wxyz_ = rpy_to_quaternions(delta_rpy_, "wxyz", use_rad=True)
             left_rotated_xyz_, left_rotated_wxyz_ = rotate_trans(self.box_base_xyz_, self.box_left_xyz_, self.box_left_wxyz_, delta_xyz_, delta_wxyz_)
