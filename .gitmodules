@@ -3,7 +3,7 @@
 	url = https://github.com/Star-Cheng/tracikpy.git
 	branch = main
 [submodule "mujoco"]
-	path = mujoco
+	path = control/mujoco
 	url = https://github.com/Star-Cheng/mujoco.git
 	branch = master
 [submodule "livox_ros_driver"]
@@ -13,4 +13,8 @@
 [submodule "livox_ros_driver2"]
 	path = record_py/scripts/src/livox_ros_driver2
 	url = https://github.com/Star-Cheng/livox_ros_driver2.git
+	branch = master
+[submodule "nlopt"]
+	path = record_py/scripts/nlopt
+	url = https://github.com/star-cheng/nlopt.git
 	branch = master

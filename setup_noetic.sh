@@ -60,3 +60,4 @@ echo "" >> ~/.bashrc &&  echo "source $(pwd)/devel/setup.bash" >> ~/.bashrc
 # cp -r /usr/share/ros-wrapper/xv_sdk ~/code/catkin_ws/src/
 # mv xv_sdk/ src/
 # catkin_make -DXVSDK_INCLUDE_DIRS="/usr/include/xvsdk" -DXVSDK_LIBRARIES="/usr/lib/libxvsdk.so"
+echo "" >> ~/.bashrc &&  echo "export PYTHONPATH=/root/gym/code/catkin_ws/devel/lib/python3/dist-packages:$PYTHONPATH" >> ~/.bashrc
