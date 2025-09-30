@@ -49,6 +49,9 @@ sudo apt-get install ros-$ROS_DISTRO-joy -y
 sudo apt install libignition-math4-dev -y
 pip install pexpect rospkg pykeyboard
 sudo apt-get install ros-noetic-joy ros-noetic-teleop-twist-keyboard -y
+cd record_py/scripts/
+sh mid360.sh
+cd -
 cd .. && catkin_make --pkg livox_laser_simulation -j16
 catkin_make -j16
 source /opt/ros/noetic/setup.bash

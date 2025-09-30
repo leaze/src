@@ -13,5 +13,4 @@ perception/livox_ros_driver2/
 *.ply
 __pycache__/
 eigen-3.4.0/
-thirdParty/
 

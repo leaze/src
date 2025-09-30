@@ -18,3 +18,11 @@
 	path = record_py/scripts/nlopt
 	url = https://github.com/star-cheng/nlopt.git
 	branch = master
+[submodule "MNN"]
+	path = unitree/robocup_g1/unitree_guide/thirdParty/MNN
+	url = https://github.com/alibaba/MNN.git
+	branch = master
+[submodule "yaml-cpp"]
+	path = unitree/robocup_g1/unitree_guide/thirdParty/yaml-cpp
+	url = https://github.com/jbeder/yaml-cpp.git
+	branch = master
