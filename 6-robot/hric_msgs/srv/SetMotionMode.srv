@@ -1,8 +1,0 @@
-#请求字段
-#导航之前请求walk模式，导航结束请求stand模式
-uint8 walk_mode_request #请求切换的运动模式-> 0: start, 1: stop, 2: zero, 3: stand, 4: walk
-bool is_need_swing_arm 
----
-#回复字段
-bool success #表示服务调用是否成功
-uint32 error_code #错误码
