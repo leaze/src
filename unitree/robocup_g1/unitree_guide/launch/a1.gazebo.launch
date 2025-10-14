@@ -1,0 +1,106 @@
+<launch>
+    <!-- 定义一个名为 "wname" 的参数 -->
+    <arg name="wname" default="earth"/>
+
+    <!-- 默认值为 "a1"，表示机器人名称，"12dof" 意味着 12 个自由度 -->
+    <arg name="rname" default="a1"/>
+
+    <!-- 使用find命令查找 g1_12dof_description 功能包的路径 -->
+    <!-- <arg name="robot_path" value="(find $(arg rname)_description)" output="screen"/> -->
+    <arg name="robot_path" value="/home/root/dev_ws/src/robocup_g1/src/unitree_ros/robots/a1_description"/> 
+    
+    
+    <arg name="dollar" value="$"/>
+
+    <!-- Set GAZEBO_MODEL_PATH -->
+
+    <!-- 设置 Gazebo 模型路径环境变量 -->
+    <!-- 设置 Gazebo 模型路径环境变量, 将unitree_gazebo包的worlds目录添加到 Gazebo 的模型搜索路径中 -->
+    <env name="GAZEBO_MODEL_PATH" value="$(find unitree_gazebo)/worlds:$(env GAZEBO_MODEL_PATH)"/>
+
+    <!-- 定义 Gazebo 启动时是否暂停的参数, 默认值为true，表示 Gazebo 启动时处于暂停状态 -->
+    <arg name="paused" default="true"/>
+
+    <!-- 定义是否使用仿真时间的参数, 默认值为true, 表示使用 Gazebo 提供的仿真时间-->
+    <arg name="use_sim_time" default="true"/>
+
+    <!-- 定义是否显示 Gazebo GUI 的参数, 默认值为true, 表示启动 Gazebo 图形界面 -->
+    <arg name="gui" default="true"/>
+
+    <!-- 定义是否以无头模式运行 Gazebo 的参数, 默认值为false, 表示不使用无头模式 -->
+    <arg name="headless" default="false"/>
+
+    <!-- 定义是否启用调试模式的参数 -->
+    <arg name="debug" default="false"/>
+
+    <!-- Debug mode will hung up the robot, use "true" or "false" to switch it. -->
+    <arg name="user_debug" default="false"/>
+    <!-- 设置Gazebo模型路径 -->
+    <!-- 指定 Gazebo 世界文件 -->
+    <include file="$(find gazebo_ros)/launch/empty_world.launch"> 
+        <arg name="world_name" value="$(find unitree_gazebo)/worlds/earth.world"/> 
+        <arg name="debug" value="$(arg debug)"/>
+        <arg name="gui" value="$(arg gui)"/> 
+        <arg name="paused" value="$(arg paused)"/>
+        <arg name="use_sim_time" value="$(arg use_sim_time)"/>
+        <arg name="headless" value="$(arg headless)"/>
+    </include>
+
+    <!-- Load the URDF into the ROS Parameter Server -->
+    <!-- 加载机器人模型描述到 ROS 参数服务器 -->
+    <!-- 使用 xacro 工具处理机器人的 xacro 模型文件，并将结果存储在robot_description参数中 -->
+    <param name="robot_description" textfile="$(arg robot_path)/urdf/a1.urdf"/>
+    <!-- Run a python script to the send a service call to gazebo_ros to spawn a URDF robot -->
+    <!-- Set trunk and joint positions at startup -->
+    <!--  -->
+    <node pkg="gazebo_ros" type="spawn_model" name="urdf_spawner" respawn="false" output="screen"
+          args="-urdf -x 0 -y 0 -z 0.659 -model $(arg rname)_gazebo -param robot_description -unpause"/> 
+ 
+    <!-- Load joint controller configurations from YAML file to parameter server -->
+    <!--  -->
+    <rosparam file="$(arg robot_path)/config/robot_control.yaml" command="load"/>
+
+    <!-- load the controllers -->
+    <!-- 启动关节控制器 -->
+    <node pkg="controller_manager" type="spawner" name="controller_spawner" respawn="false"
+          output="screen" ns="/$(arg rname)_gazebo" args="joint_state_controller
+          left_hip_pitch_controller   
+          left_hip_roll_controller
+          left_hip_yaw_controller
+          left_knee_controller
+          left_ankle_pitch_controller
+          left_ankle_roll_controller
+
+          right_hip_pitch_controller   
+          right_hip_roll_controller
+          right_hip_yaw_controller
+          right_knee_controller
+          right_ankle_pitch_controller
+          right_ankle_roll_controller
+        "/>
+
+    <!-- convert joint states to TF transforms for rviz, etc -->
+    <!-- 发布机器人状态 -->
+    <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher"
+          respawn="false" output="screen">
+        <remap from="/joint_states" to="/$(arg rname)_gazebo/joint_states"/>
+    </node>
+
+    <!-- load the parameter unitree_controller -->
+    <!-- 包含 Unitree 控制器的配置文件, 加载 Unitree 机器人控制器的参数设置 -->
+    <include file="$(find unitree_controller)/launch/set_ctrl.launch">
+        <arg name="rname" value="$(arg rname)"/>
+    </include>
+
+    <!-- Joy node for gamepad/joystick control -->
+    <!-- 启动游戏手柄控制节点 -->
+    <node pkg="joy" type="joy_node" name="joy_node" output="screen">
+        <param name="dev" value="/dev/input/js1"/>
+        <param name="deadzone" value="0.05"/>
+        <param name="autorepeat_rate" value="20"/>
+        <param name="ff_enabled" value="false"/>
+        <param name="automatic_reconnect" value="true"/>
+        <param name="reconnect_interval" value="1000"/>
+    </node>
+
+</launch>
